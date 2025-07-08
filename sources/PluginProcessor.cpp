@@ -130,25 +130,34 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    // In case we have more outputs than inputs, this code clears any output
-    // channels that didn't contain input data, (because these aren't
-    // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
+    // Clear any output channels that don't have input data
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
+    // Detects when a new beat starts, based on host-provided PPQ position
+    beatJustOccurred = false;
+    if (auto* playHead = getPlayHead())
+    {
+        if (auto pos = playHead->getPosition())
+        {
+            const auto& info = *pos;
+            // Ensure transport is playing and host provides timing info
+            if (info.getIsPlaying() && info.getPpqPosition().hasValue())
+            {
+                const double currentPpq = *info.getPpqPosition();
+                const int currentBeat   = static_cast<int>(std::floor(currentPpq));
+                const int lastBeat      = static_cast<int>(std::floor(lastPpqPosition));
+                // Trigger event if a new beat has started
+                beatJustOccurred = (currentBeat > lastBeat);
+                lastPpqPosition = currentPpq;
+            }
+        }
+    }
 
-    // Forward audio to the editor for visualization
-    if (auto* editor = dynamic_cast<AudioPluginAudioProcessorEditor*> (getActiveEditor()))
-        editor->pushBuffer(buffer);
+    // Forward audio to the editor for visualization if a new beat occurs
+    if (beatJustOccurred)
+        if (auto* editor = dynamic_cast<AudioPluginAudioProcessorEditor*> (getActiveEditor()))
+            editor->pushBuffer(buffer);
 }
 
 //==============================================================================

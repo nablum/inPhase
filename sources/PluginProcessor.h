@@ -44,5 +44,8 @@ public:
 
 private:
     //==============================================================================
+    double lastPpqPosition = 0.0;
+    bool beatJustOccurred = false;
+    //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)
 };
