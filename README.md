@@ -8,11 +8,17 @@
 
 Phase detection audio plugin built with [JUCE](https://juce.com) and CMake.  
 Supports building as VST3, AU, and standalone (depending on your platform).
+
 <!--
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/1500c2b1-b0db-4003-8ab1-d4d314ac913c" alt="UI Screenshot" width="600" />
+  <img
+    src="image-link"
+    alt="UI Screenshot"
+    width="600"
+  />
 </p>
 -->
+
 ## 🛠️ Requirements
 
 ### System
@@ -47,6 +53,7 @@ python3 build.py
 ```
 
 ### Optional arguments
+
 ```bash
 python3 build.py \
     --config Debug \
@@ -68,14 +75,18 @@ This is handled by the JUCE CMake option:
 
 ```cmake
 COPY_PLUGIN_AFTER_BUILD TRUE
+
 ```
+
 | Format | macOS                                  | Windows                      | Linux                          |
 | ------ | -------------------------------------- | ---------------------------- | ------------------------------ |
 | VST3   | `~/Library/Audio/Plug-Ins/VST3/`       | `%COMMONPROGRAMFILES%\VST3\` | `~/.vst3/` or `/usr/lib/vst3/` |
 | AU     | `~/Library/Audio/Plug-Ins/Components/` | —                            | —                              |
 
 ## ⚠️ Plugin Format
+
 By default, the plugin is built only in VST3 format, as specified in the `CMakeLists.txt` file:
+
 ```bash
 juce_add_plugin(audioPlugin
     ...
@@ -88,10 +99,13 @@ If you want to build other formats (e.g. AU, AAX, Standalone), update the `FORMA
 ```bash
 FORMATS VST3 AU Standalone
 ```
+
 Make sure your system supports the additional formats and JUCE is properly configured (e.g., Xcode for AU, AAX SDK for AAX).
 
 ## 🧼 Clean Build
+
 Remove previous build files and build fresh (useful if build errors occur):
+
 ```bash
 rm -rf build
 python3 build.py
