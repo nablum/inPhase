@@ -17,7 +17,7 @@ public:
 
 private:
     AudioPluginAudioProcessor& processorRef;
-    juce::Array<float> waveform;  // Internal buffer to hold audio data
+    juce::Array<juce::Array<float>> waveformChannels;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessorEditor)
 };

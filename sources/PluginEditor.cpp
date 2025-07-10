@@ -17,26 +17,37 @@ AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
 void AudioPluginAudioProcessorEditor::paint (juce::Graphics& g)
 {
     g.fillAll(juce::Colours::black);
-    g.setColour(juce::Colours::cyan);
-
-    if (waveform.isEmpty())
-        return;
 
     const int width = getWidth();
     const int height = getHeight();
-    const int numSamples = waveform.size();
+    const int numChannels = waveformChannels.size();
 
-    juce::Path path;
-    path.startNewSubPath(0, height / 2);
+    if (numChannels == 0)
+        return;
 
-    for (int i = 0; i < numSamples; ++i)
+    for (int ch = 0; ch < numChannels; ++ch)
     {
-        const float x = juce::jmap<float>(i, 0, numSamples - 1, 0, (float)width);
-        const float y = height / 2 - waveform[i] * (height / 2);
-        path.lineTo(x, y);
-    }
+        const auto& waveform = waveformChannels[ch];
+        const int numSamples = waveform.size();
+        if (numSamples == 0)
+            continue;
 
-    g.strokePath(path, juce::PathStrokeType(2.0f));
+        // Use unique colors per channel with transparency
+        auto color = juce::Colour::fromHSV((float)ch / numChannels, 0.8f, 0.9f, 0.8f);
+        g.setColour(color);
+
+        juce::Path path;
+        path.startNewSubPath(0, height / 2);
+
+        for (int i = 0; i < numSamples; ++i)
+        {
+            float x = juce::jmap<float>(i, 0, numSamples - 1, 0.0f, (float)width);
+            float y = height / 2 - waveform[i] * (height / 2);
+            path.lineTo(x, y);
+        }
+
+        g.strokePath(path, juce::PathStrokeType(2.0f));
+    }
 }
 
 void AudioPluginAudioProcessorEditor::resized()
@@ -45,12 +56,23 @@ void AudioPluginAudioProcessorEditor::resized()
 
 void AudioPluginAudioProcessorEditor::pushBuffer(const juce::AudioBuffer<float>& buffer)
 {
+    const int numChannels = buffer.getNumChannels();
     const int numSamples = buffer.getNumSamples();
-    const float* channelData = buffer.getReadPointer(0); // mono: first channel
 
-    waveform.resize(numSamples);
-    for (int i = 0; i < numSamples; ++i)
-        waveform.set(i, channelData[i]);
+    waveformChannels.clearQuick();
+    waveformChannels.ensureStorageAllocated(numChannels);
+
+    for (int ch = 0; ch < numChannels; ++ch)
+    {
+        const float* channelData = buffer.getReadPointer(ch);
+        juce::Array<float> channelArray;
+        channelArray.resize(numSamples);
+
+        for (int i = 0; i < numSamples; ++i)
+            channelArray.set(i, channelData[i]);
+
+        waveformChannels.add(std::move(channelArray));
+    }
 
     repaint();
 }
