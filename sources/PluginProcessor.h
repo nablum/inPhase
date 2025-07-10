@@ -46,13 +46,6 @@ private:
     //==============================================================================
     double lastPpqPosition = 0.0;
     bool beatJustOccurred = false;
-
-    // FIFO for thread-safe buffer passing
-    static constexpr int fifoSize = 8;
-    juce::AbstractFifo fifo { fifoSize };
-    std::array<juce::AudioBuffer<float>, fifoSize> buffers;
-
-    friend class AudioPluginAudioProcessorEditor; // To allow editor access
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)
 };

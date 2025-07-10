@@ -48,8 +48,10 @@ void AudioPluginAudioProcessorEditor::pushBuffer(const juce::AudioBuffer<float>&
     const int numSamples = buffer.getNumSamples();
     const float* channelData = buffer.getReadPointer(0); // mono: first channel
 
-    waveform.clearQuick();
-    waveform.ensureStorageAllocated(numSamples);
+    waveform.resize(numSamples);
+    for (int i = 0; i < numSamples; ++i)
+        waveform.set(i, channelData[i]);
+
 
     for (int i = 0; i < numSamples; ++i)
         waveform.add(channelData[i]);

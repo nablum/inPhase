@@ -4,24 +4,20 @@
 #include "PluginProcessor.h"
 
 //==============================================================================
-class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor, private juce::Timer
+class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor
 {
 public:
     explicit AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor&);
     ~AudioPluginAudioProcessorEditor() override;
-    //==============================================================================
+
     void paint (juce::Graphics&) override;
     void resized() override;
 
-private:
-    //==============================================================================
     void pushBuffer(const juce::AudioBuffer<float>& buffer);
-    void timerCallback() override;
 
 private:
-    //==============================================================================
     AudioPluginAudioProcessor& processorRef;
-    juce::Array<float> waveform;
-    //==============================================================================
+    juce::Array<float> waveform;  // Internal buffer to hold audio data
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessorEditor)
 };
