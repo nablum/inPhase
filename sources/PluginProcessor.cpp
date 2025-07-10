@@ -150,8 +150,8 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 const double currentPpq = *info.getPpqPosition();
                 const int currentBeat   = static_cast<int>(std::floor(currentPpq));
                 const int lastBeat      = static_cast<int>(std::floor(lastPpqPosition));
-                // Trigger event if a new beat has started
-                beatJustOccurred = (currentBeat > lastBeat);
+                // Trigger event if a new beat has started (forward of backward jump)
+                beatJustOccurred = (currentBeat > lastBeat) || (currentPpq < lastPpqPosition);
                 lastPpqPosition = currentPpq;
             }
         }
