@@ -50,11 +50,12 @@ void AudioPluginAudioProcessorEditor::paint (juce::Graphics& g)
     }
 }
 
+
 void AudioPluginAudioProcessorEditor::resized()
 {
 }
 
-void AudioPluginAudioProcessorEditor::pushBuffer(const juce::AudioBuffer<float>& buffer)
+void AudioPluginAudioProcessorEditor::pushBuffer(const juce::AudioBuffer<float>& buffer, int startSampleIndex)
 {
     const int numChannels = buffer.getNumChannels();
     const int numSamples = buffer.getNumSamples();
@@ -68,8 +69,12 @@ void AudioPluginAudioProcessorEditor::pushBuffer(const juce::AudioBuffer<float>&
         juce::Array<float> channelArray;
         channelArray.resize(numSamples);
 
+        // Copy from startSampleIndex to end
         for (int i = 0; i < numSamples; ++i)
-            channelArray.set(i, channelData[i]);
+        {
+            int circularIndex = (startSampleIndex + i) % numSamples;
+            channelArray.set(i, channelData[circularIndex]);
+        }
 
         waveformChannels.add(std::move(channelArray));
     }

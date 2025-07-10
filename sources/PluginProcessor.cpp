@@ -138,6 +138,8 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
+    const int numSamples = buffer.getNumSamples();
+    const int numChannels = juce::jmin(buffer.getNumChannels(), beatBuffer.getNumChannels());
 
     // Clear any output channels that don't have input data
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
@@ -145,26 +147,37 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
     // Detects when a new beat starts, based on host-provided PPQ position
     beatJustOccurred = false;
+    int beatSampleOffset = -1; // sample offset in this block where beat occurs
+
     if (auto* playHead = getPlayHead())
     {
         if (auto pos = playHead->getPosition())
         {
             const auto& info = *pos;
-            // Ensure transport is playing and host provides timing info
-            if (info.getIsPlaying() && info.getPpqPosition().hasValue())
+            if (info.getIsPlaying() && info.getPpqPosition().hasValue() && info.getBpm().hasValue())
             {
                 const double currentPpq = *info.getPpqPosition();
-                const int currentBeat   = static_cast<int>(std::floor(currentPpq));
-                const int lastBeat      = static_cast<int>(std::floor(lastPpqPosition));
-                // Detect normal forward beat OR loop restart (backward jump)
-                beatJustOccurred = (currentBeat > lastBeat) || (currentPpq < lastPpqPosition);
+                const double bpm = *info.getBpm();
+                const int currentBeat = static_cast<int>(std::floor(currentPpq));
+                const int lastBeat = static_cast<int>(std::floor(lastPpqPosition));
+
+                if ((currentBeat > lastBeat) || (currentPpq < lastPpqPosition))
+                {
+                    beatJustOccurred = true;
+
+                    // Improved precision: calculate offset from start of block using PPQ resolution
+                    const double ppqPerSample = bpm / 60.0 / getSampleRate();
+                    const double beatFraction = currentPpq - std::floor(currentPpq);
+                    const double samplesSinceLastBeat = beatFraction / ppqPerSample;
+
+                    beatSampleOffset = static_cast<int>(std::round(samplesSinceLastBeat));
+                    beatSampleOffset = juce::jlimit(0, numSamples - 1, beatSampleOffset);
+                }
+
                 lastPpqPosition = currentPpq;
             }
         }
     }
-
-    const int numSamples = buffer.getNumSamples();
-    const int numChannels = juce::jmin(buffer.getNumChannels(), beatBuffer.getNumChannels());
 
     // --- Update samplesPerBeat dynamically from host ---
     if (auto* playHead = getPlayHead())
@@ -202,10 +215,13 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         circularWritePosition = (circularWritePosition + 1) % samplesPerBeat; 
     }
 
-    // Push audio to editor for custom waveform rendering on beat trigger
-    if (beatJustOccurred)
-        if (auto* editor = dynamic_cast<AudioPluginAudioProcessorEditor*> (getActiveEditor()))
-            editor->pushBuffer(beatBuffer);
+    // --- On beat, push buffer + start index to GUI ---
+    if (beatJustOccurred && beatSampleOffset >= 0)
+    {
+        const int beatStartIndex = (circularWritePosition + samplesPerBeat - numSamples - beatSampleOffset) % samplesPerBeat;
+        if (auto* editor = dynamic_cast<AudioPluginAudioProcessorEditor*>(getActiveEditor()))
+            editor->pushBuffer(beatBuffer, beatStartIndex);
+    }
 }
 
 //==============================================================================

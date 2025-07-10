@@ -13,7 +13,7 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 
-    void pushBuffer(const juce::AudioBuffer<float>& buffer);
+    void pushBuffer(const juce::AudioBuffer<float>& buffer, int startSampleIndex);
 
 private:
     AudioPluginAudioProcessor& processorRef;
