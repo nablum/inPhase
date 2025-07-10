@@ -42,6 +42,11 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    //==============================================================================
+    void updateSamplesPerBeatIfNeeded();
+    bool detectBeatAndCalculateOffset(int numSamples, int& beatSampleOffset);
+    void writeToCircularBuffer(const juce::AudioBuffer<float>& buffer, int numChannels, int numSamples);
+
 private:
     //==============================================================================
     double lastPpqPosition = 0.0;

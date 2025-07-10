@@ -130,56 +130,44 @@ bool AudioPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layou
   #endif
 }
 
-void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
-                                              juce::MidiBuffer& midiMessages)
+void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
+                                             juce::MidiBuffer& midiMessages)
 {
-    juce::ignoreUnused (midiMessages);
-
+    juce::ignoreUnused(midiMessages);
     juce::ScopedNoDenormals noDenormals;
-    auto totalNumInputChannels  = getTotalNumInputChannels();
-    auto totalNumOutputChannels = getTotalNumOutputChannels();
+
     const int numSamples = buffer.getNumSamples();
+    const int totalNumInputChannels = getTotalNumInputChannels();
+    const int totalNumOutputChannels = getTotalNumOutputChannels();
     const int numChannels = juce::jmin(buffer.getNumChannels(), beatBuffer.getNumChannels());
 
-    // Clear any output channels that don't have input data
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear (i, 0, buffer.getNumSamples());
+    // --- Clear output channels that have no corresponding input ---
+    for (int i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
+        buffer.clear(i, 0, numSamples);
 
-    // Detects when a new beat starts, based on host-provided PPQ position
-    beatJustOccurred = false;
-    int beatSampleOffset = -1; // sample offset in this block where beat occurs
+    // --- Update beat duration if BPM has changed ---
+    updateSamplesPerBeatIfNeeded();
 
-    if (auto* playHead = getPlayHead())
+    // --- Check if a new beat occurred and calculate sample offset if so ---
+    int beatSampleOffset = -1;
+    beatJustOccurred = detectBeatAndCalculateOffset(numSamples, beatSampleOffset);
+
+    // --- Write audio to circular beat buffer ---
+    writeToCircularBuffer(buffer, numChannels, numSamples);
+
+    // --- If a beat just occurred, send buffer with correct alignment to GUI ---
+    if (beatJustOccurred && beatSampleOffset >= 0)
     {
-        if (auto pos = playHead->getPosition())
-        {
-            const auto& info = *pos;
-            if (info.getIsPlaying() && info.getPpqPosition().hasValue() && info.getBpm().hasValue())
-            {
-                const double currentPpq = *info.getPpqPosition();
-                const double bpm = *info.getBpm();
-                const int currentBeat = static_cast<int>(std::floor(currentPpq));
-                const int lastBeat = static_cast<int>(std::floor(lastPpqPosition));
+        // Align the beat in the buffer using the offset relative to write pointer
+        const int beatStartIndex = (circularWritePosition + samplesPerBeat - numSamples - beatSampleOffset) % samplesPerBeat;
 
-                if ((currentBeat > lastBeat) || (currentPpq < lastPpqPosition))
-                {
-                    beatJustOccurred = true;
-
-                    // Improved precision: calculate offset from start of block using PPQ resolution
-                    const double ppqPerSample = bpm / 60.0 / getSampleRate();
-                    const double beatFraction = currentPpq - std::floor(currentPpq);
-                    const double samplesSinceLastBeat = beatFraction / ppqPerSample;
-
-                    beatSampleOffset = static_cast<int>(std::round(samplesSinceLastBeat));
-                    beatSampleOffset = juce::jlimit(0, numSamples - 1, beatSampleOffset);
-                }
-
-                lastPpqPosition = currentPpq;
-            }
-        }
+        if (auto* editor = dynamic_cast<AudioPluginAudioProcessorEditor*>(getActiveEditor()))
+            editor->pushBuffer(beatBuffer, beatStartIndex);
     }
+}
 
-    // --- Update samplesPerBeat dynamically from host ---
+void AudioPluginAudioProcessor::updateSamplesPerBeatIfNeeded()
+{
     if (auto* playHead = getPlayHead())
     {
         if (auto pos = playHead->getPosition())
@@ -200,29 +188,60 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             }
         }
     }
+}
 
-    // --- Write incoming audio to the circular buffer ---
+bool AudioPluginAudioProcessor::detectBeatAndCalculateOffset(int numSamples, int& beatSampleOffset)
+{
+    if (auto* playHead = getPlayHead())
+    {
+        if (auto pos = playHead->getPosition())
+        {
+            const auto& info = *pos;
+
+            if (info.getIsPlaying() && info.getPpqPosition().hasValue() && info.getBpm().hasValue())
+            {
+                const double currentPpq = *info.getPpqPosition();
+                const double bpm = *info.getBpm();
+                const int currentBeat = static_cast<int>(std::floor(currentPpq));
+                const int lastBeat = static_cast<int>(std::floor(lastPpqPosition));
+
+                if ((currentBeat > lastBeat) || (currentPpq < lastPpqPosition))
+                {
+                    const double ppqPerSample = bpm / 60.0 / getSampleRate();
+                    const double beatFraction = currentPpq - std::floor(currentPpq);
+                    const double samplesSinceLastBeat = beatFraction / ppqPerSample;
+
+                    beatSampleOffset = static_cast<int>(std::round(samplesSinceLastBeat));
+                    beatSampleOffset = juce::jlimit(0, numSamples - 1, beatSampleOffset);
+                    lastPpqPosition = currentPpq;
+                    return true;
+                }
+
+                lastPpqPosition = currentPpq;
+            }
+        }
+    }
+
+    return false;
+}
+
+void AudioPluginAudioProcessor::writeToCircularBuffer(const juce::AudioBuffer<float>& buffer,
+                                                      int numChannels, int numSamples)
+{
     for (int i = 0; i < numSamples; ++i)
     {
-        for (int channel = 0; channel < numChannels; ++channel)
+        for (int ch = 0; ch < numChannels; ++ch)
         {
-            const float* input = buffer.getReadPointer(channel);
-            float* circular = beatBuffer.getWritePointer(channel);
+            const float* input = buffer.getReadPointer(ch);
+            float* circular = beatBuffer.getWritePointer(ch);
 
             circular[circularWritePosition] = input[i];
         }
 
-        circularWritePosition = (circularWritePosition + 1) % samplesPerBeat; 
-    }
-
-    // --- On beat, push buffer + start index to GUI ---
-    if (beatJustOccurred && beatSampleOffset >= 0)
-    {
-        const int beatStartIndex = (circularWritePosition + samplesPerBeat - numSamples - beatSampleOffset) % samplesPerBeat;
-        if (auto* editor = dynamic_cast<AudioPluginAudioProcessorEditor*>(getActiveEditor()))
-            editor->pushBuffer(beatBuffer, beatStartIndex);
+        circularWritePosition = (circularWritePosition + 1) % samplesPerBeat;
     }
 }
+
 
 //==============================================================================
 bool AudioPluginAudioProcessor::hasEditor() const
