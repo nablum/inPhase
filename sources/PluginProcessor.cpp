@@ -88,7 +88,16 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
-    juce::ignoreUnused (sampleRate, samplesPerBlock);
+    juce::ignoreUnused (samplesPerBlock);
+
+    // Calculate samples per beat based on BPM and sample rate
+    // For now, we assume 120 BPM. We’ll update this dynamically using the host info in the next step.
+    samplesPerBeat = static_cast<int>((60.0 / 120.0) * sampleRate);
+
+    beatBuffer.setSize(getTotalNumInputChannels(), samplesPerBeat);
+    beatBuffer.clear();
+
+    circularWritePosition = 0;
 }
 
 void AudioPluginAudioProcessor::releaseResources()
@@ -154,10 +163,49 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         }
     }
 
+    const int numSamples = buffer.getNumSamples();
+    const int numChannels = juce::jmin(buffer.getNumChannels(), beatBuffer.getNumChannels());
+
+    // --- Update samplesPerBeat dynamically from host ---
+    if (auto* playHead = getPlayHead())
+    {
+        if (auto pos = playHead->getPosition())
+        {
+            if (pos->getBpm().hasValue())
+            {
+                const double bpm = *pos->getBpm();
+                const double sampleRate = getSampleRate();
+                const int newSamplesPerBeat = static_cast<int>((60.0 / bpm) * sampleRate);
+
+                if (newSamplesPerBeat != samplesPerBeat)
+                {
+                    samplesPerBeat = newSamplesPerBeat;
+                    beatBuffer.setSize(getTotalNumInputChannels(), samplesPerBeat);
+                    beatBuffer.clear();
+                    circularWritePosition = 0;
+                }
+            }
+        }
+    }
+
+    // --- Write incoming audio to the circular buffer ---
+    for (int i = 0; i < numSamples; ++i)
+    {
+        for (int channel = 0; channel < numChannels; ++channel)
+        {
+            const float* input = buffer.getReadPointer(channel);
+            float* circular = beatBuffer.getWritePointer(channel);
+
+            circular[circularWritePosition] = input[i];
+        }
+
+        circularWritePosition = (circularWritePosition + 1) % samplesPerBeat; 
+    }
+
     // Push audio to editor for custom waveform rendering on beat trigger
     if (beatJustOccurred)
         if (auto* editor = dynamic_cast<AudioPluginAudioProcessorEditor*> (getActiveEditor()))
-            editor->pushBuffer(buffer);
+            editor->pushBuffer(beatBuffer);
 }
 
 //==============================================================================

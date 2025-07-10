@@ -46,6 +46,9 @@ private:
     //==============================================================================
     double lastPpqPosition = 0.0;
     bool beatJustOccurred = false;
+    juce::AudioBuffer<float> beatBuffer; // Circular buffer to store one beat of audio
+    int circularWritePosition = 0; // Current write index in the circular buffer
+    int samplesPerBeat = 0; // Samples per beat, recomputed dynamically
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)
 };
