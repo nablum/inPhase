@@ -52,9 +52,5 @@ void AudioPluginAudioProcessorEditor::pushBuffer(const juce::AudioBuffer<float>&
     for (int i = 0; i < numSamples; ++i)
         waveform.set(i, channelData[i]);
 
-
-    for (int i = 0; i < numSamples; ++i)
-        waveform.add(channelData[i]);
-
     repaint();
 }
