@@ -147,14 +147,14 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 const double currentPpq = *info.getPpqPosition();
                 const int currentBeat   = static_cast<int>(std::floor(currentPpq));
                 const int lastBeat      = static_cast<int>(std::floor(lastPpqPosition));
-                // Trigger event if a new beat has started
-                beatJustOccurred = (currentBeat > lastBeat);
+                // Detect normal forward beat OR loop restart (backward jump)
+                beatJustOccurred = (currentBeat > lastBeat) || (currentPpq < lastPpqPosition);
                 lastPpqPosition = currentPpq;
             }
         }
     }
 
-    // Forward audio to the editor for visualization if a new beat occurs
+    // Push audio to editor for custom waveform rendering on beat trigger
     if (beatJustOccurred)
         if (auto* editor = dynamic_cast<AudioPluginAudioProcessorEditor*> (getActiveEditor()))
             editor->pushBuffer(buffer);
