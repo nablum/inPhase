@@ -9,7 +9,6 @@ class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor,
 public:
     explicit AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor&);
     ~AudioPluginAudioProcessorEditor() override;
-
     //==============================================================================
     void paint (juce::Graphics&) override;
     void resized() override;
@@ -19,8 +18,10 @@ private:
     void pushBuffer(const juce::AudioBuffer<float>& buffer);
     void timerCallback() override;
 
+private:
+    //==============================================================================
     AudioPluginAudioProcessor& processorRef;
-    juce::AudioVisualiserComponent visualiser;
-
+    juce::Array<float> waveform;
+    //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessorEditor)
 };
