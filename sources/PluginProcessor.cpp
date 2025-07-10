@@ -154,7 +154,7 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         }
     }
 
-    // Forward audio to the editor for visualization if a new beat occurs
+    // Push audio to editor for custom waveform rendering on beat trigger
     if (beatJustOccurred)
         if (auto* editor = dynamic_cast<AudioPluginAudioProcessorEditor*> (getActiveEditor()))
             editor->pushBuffer(buffer);

@@ -3,16 +3,10 @@
 
 //==============================================================================
 AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor& p)
-    : AudioProcessorEditor (&p), processorRef (p), visualiser (2) // stereo
+    : AudioProcessorEditor (&p), processorRef (p)
 {
     juce::ignoreUnused (processorRef);
-    
     setSize (600, 300);
-    visualiser.setBufferSize(128);            // Internal ring buffer size
-    visualiser.setSamplesPerBlock(16);        // Expected block size from processBlock
-    visualiser.setRepaintRate(60);            // Refresh rate in Hz
-    visualiser.setColours(juce::Colours::black, juce::Colours::lime);
-    addAndMakeVisible(visualiser);
 }
 
 AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
@@ -22,15 +16,43 @@ AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
 //==============================================================================
 void AudioPluginAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    juce::ignoreUnused (g);
+    g.fillAll(juce::Colours::black);
+    g.setColour(juce::Colours::cyan);
+
+    if (waveform.isEmpty())
+        return;
+
+    const int width = getWidth();
+    const int height = getHeight();
+    const int numSamples = waveform.size();
+
+    juce::Path path;
+    path.startNewSubPath(0, height / 2);
+
+    for (int i = 0; i < numSamples; ++i)
+    {
+        const float x = juce::jmap<float>(i, 0, numSamples - 1, 0, (float)width);
+        const float y = height / 2 - waveform[i] * (height / 2);
+        path.lineTo(x, y);
+    }
+
+    g.strokePath(path, juce::PathStrokeType(2.0f));
 }
 
 void AudioPluginAudioProcessorEditor::resized()
 {
-    visualiser.setBounds(getLocalBounds());
 }
 
 void AudioPluginAudioProcessorEditor::pushBuffer(const juce::AudioBuffer<float>& buffer)
 {
-    visualiser.pushBuffer(buffer);
+    const int numSamples = buffer.getNumSamples();
+    const float* channelData = buffer.getReadPointer(0); // mono: first channel
+
+    waveform.clearQuick();
+    waveform.ensureStorageAllocated(numSamples);
+
+    for (int i = 0; i < numSamples; ++i)
+        waveform.add(channelData[i]);
+
+    repaint();
 }
