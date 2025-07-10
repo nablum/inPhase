@@ -12,6 +12,9 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                      #endif
                        )
 {
+    // Pre-allocate buffers for safe use
+    for (auto& buf : buffers)
+        buf.setSize(2, 512); // Adjust channels/samples if needed
 }
 
 AudioPluginAudioProcessor::~AudioPluginAudioProcessor()
@@ -154,10 +157,17 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         }
     }
 
-    // Forward audio to the editor for visualization if a new beat occurs
+    // Push audio to FIFO for visualisation on beat
     if (beatJustOccurred)
-        if (auto* editor = dynamic_cast<AudioPluginAudioProcessorEditor*> (getActiveEditor()))
-            editor->pushBuffer(buffer);
+    {
+        int start1, size1, start2, size2;
+        fifo.prepareToWrite(1, start1, size1, start2, size2);
+        if (size1 > 0)
+        {
+            buffers[static_cast<std::size_t>(start1)].makeCopyOf(buffer); // safe copy
+            fifo.finishedWrite(1);
+        }
+    }
 }
 
 //==============================================================================
