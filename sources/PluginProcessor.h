@@ -47,6 +47,10 @@ public:
     bool detectBeatAndCalculateOffset(int numSamples, int& beatSampleOffset);
     void writeToCircularBuffer(const juce::AudioBuffer<float>& buffer, int numChannels, int numSamples);
 
+    //==============================================================================
+    double getNormalizedBeatPosition() const { return normalizedBeatPosition.load(); }
+    bool isTransportPlaying() const { return isPlaying.load(); }
+
 private:
     //==============================================================================
     double lastPpqPosition = 0.0;
@@ -54,6 +58,8 @@ private:
     juce::AudioBuffer<float> beatBuffer; // Circular buffer to store one beat of audio
     int circularWritePosition = 0; // Current write index in the circular buffer
     int samplesPerBeat = 0; // Samples per beat, recomputed dynamically
+    std::atomic<double> normalizedBeatPosition { 0.0 };
+    std::atomic<bool> isPlaying { false };
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)
 };

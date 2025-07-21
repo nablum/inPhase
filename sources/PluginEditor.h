@@ -4,7 +4,7 @@
 #include "PluginProcessor.h"
 
 //==============================================================================
-class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor
+class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor, private juce::Timer
 {
 public:
     explicit AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor&);
@@ -14,6 +14,7 @@ public:
     void resized() override;
 
     void pushBuffer(const juce::AudioBuffer<float>& buffer, int startSampleIndex);
+    void timerCallback() override;
 
 private:
     AudioPluginAudioProcessor& processorRef;

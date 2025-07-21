@@ -7,6 +7,7 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
 {
     juce::ignoreUnused (processorRef);
     setSize (600, 300);
+    startTimerHz(60);
 }
 
 AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
@@ -48,6 +49,17 @@ void AudioPluginAudioProcessorEditor::paint (juce::Graphics& g)
 
         g.strokePath(path, juce::PathStrokeType(2.0f));
     }
+
+    // Draw playhead cursor
+    double beatPos = processorRef.getNormalizedBeatPosition();
+    bool playing = processorRef.isTransportPlaying();
+    int cursorX = static_cast<int>(beatPos * getWidth());
+    if (playing)
+    {
+        g.setColour(juce::Colours::white);
+        g.drawLine((float)cursorX, 0.0f, (float)cursorX, (float)getHeight(), 2.0f); // x1, y1, x2, y2, thickness
+    }
+
 }
 
 
@@ -79,5 +91,10 @@ void AudioPluginAudioProcessorEditor::pushBuffer(const juce::AudioBuffer<float>&
         waveformChannels.add(std::move(channelArray));
     }
 
+    repaint();
+}
+
+void AudioPluginAudioProcessorEditor::timerCallback()
+{
     repaint();
 }

@@ -145,6 +145,20 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     for (int i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, numSamples);
 
+    // --- Update playhead position ---
+    if (auto* playHead = getPlayHead())
+    {
+        if (auto pos = playHead->getPosition())
+        {
+            isPlaying.store(pos->getIsPlaying());
+            if (auto ppq = pos->getPpqPosition())
+            {
+                double beatPosition = *ppq - std::floor(*ppq);
+                normalizedBeatPosition.store(beatPosition);
+            }
+        }
+    }
+
     // --- Update beat duration if BPM has changed ---
     updateSamplesPerBeatIfNeeded();
 
