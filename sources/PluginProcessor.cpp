@@ -156,6 +156,20 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 if (auto ppq = position->getPpqPosition())
                 {
                     int index = getDisplayBufferIndexFromPpq(*ppq);
+                    int displayLength = displayBuffer.getNumSamples();
+                    int numSamples = buffer.getNumSamples();
+                    int numChannels = buffer.getNumChannels();
+
+                    for (int ch = 0; ch < numChannels; ++ch)
+                    {
+                        const float* in = buffer.getReadPointer(ch);
+
+                        for (int i = 0; i < numSamples; ++i)
+                        {
+                            int writeIndex = (index + i) % displayLength;
+                            displayBuffer.setSample(ch, writeIndex, in[i]);
+                        }
+                    }
                 }
             }
         }
