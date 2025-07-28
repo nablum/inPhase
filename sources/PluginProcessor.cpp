@@ -115,7 +115,22 @@ void AudioPluginAudioProcessor::clearExtraOutputChannels (juce::AudioBuffer<floa
 
 void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    juce::ignoreUnused (sampleRate, samplesPerBlock);
+    juce::ignoreUnused (samplesPerBlock);
+
+    // Example BPM, you might want to fetch this from host or a parameter later
+    double bpm = 120.0;
+
+    // Compute number of samples for 1 beat
+    int samplesPerBeat = static_cast<int>((60.0 / bpm) * sampleRate);
+
+    // Choose the number of channels: same as your plugin's input/output
+    int numChannels = getTotalNumOutputChannels();
+
+    // Allocate the buffer: numChannels x samplesPerBeat
+    displayBuffer.setSize(numChannels, samplesPerBeat, false, true, true);
+
+    // Clear buffer to avoid garbage values
+    displayBuffer.clear();
 }
 
 void AudioPluginAudioProcessor::releaseResources()
@@ -130,6 +145,17 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
     clearExtraOutputChannels(buffer);
 
+    if (auto* playhead = getPlayHead())
+    {
+        if (auto position = playhead->getPosition())
+        {
+            if (auto bpm = position->getBpm())
+            {
+                updateDisplayBufferIfNeeded(*bpm);
+            }
+        }
+    }
+
     auto totalNumInputChannels = getTotalNumInputChannels();
 
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
@@ -137,6 +163,22 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         auto* channelData = buffer.getWritePointer(channel);
         juce::ignoreUnused(channelData);
         // ..do something to the data...
+    }
+}
+
+//==============================================================================
+void AudioPluginAudioProcessor::updateDisplayBufferIfNeeded(double bpm)
+{
+    constexpr double bpmTolerance = 0.01;
+    if (bpm > 0.0 && std::abs(bpm - displayBufferBpm) > bpmTolerance)
+    {
+        displayBufferBpm = bpm;
+
+        int samplesPerBeat = static_cast<int>((60.0 / bpm) * getSampleRate());
+        int numChannels = getTotalNumOutputChannels();
+
+        displayBuffer.setSize(numChannels, samplesPerBeat, false, true, true);
+        displayBuffer.clear();
     }
 }
 

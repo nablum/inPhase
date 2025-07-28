@@ -18,7 +18,10 @@ public:
 
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
     using AudioProcessor::processBlock;
+
+    //==============================================================================
     void clearExtraOutputChannels (juce::AudioBuffer<float>& buffer);
+    void updateDisplayBufferIfNeeded(double bpm);
 
     //==============================================================================
     juce::AudioProcessorEditor* createEditor() override;
@@ -45,5 +48,7 @@ public:
 
 private:
     //==============================================================================
+    juce::AudioBuffer<float> displayBuffer;
+    double displayBufferBpm = -1.0;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)
 };
