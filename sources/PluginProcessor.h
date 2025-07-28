@@ -18,6 +18,7 @@ public:
 
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
     using AudioProcessor::processBlock;
+    void clearExtraOutputChannels (juce::AudioBuffer<float>& buffer);
 
     //==============================================================================
     juce::AudioProcessorEditor* createEditor() override;
