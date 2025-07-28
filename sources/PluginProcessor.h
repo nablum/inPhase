@@ -22,6 +22,7 @@ public:
     //==============================================================================
     void clearExtraOutputChannels (juce::AudioBuffer<float>& buffer);
     void updateDisplayBufferIfNeeded(double bpm);
+    int getDisplayBufferIndexFromPpq(double ppq) const;
 
     //==============================================================================
     juce::AudioProcessorEditor* createEditor() override;

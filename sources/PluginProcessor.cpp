@@ -152,6 +152,11 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             if (auto bpm = position->getBpm())
             {
                 updateDisplayBufferIfNeeded(*bpm);
+
+                if (auto ppq = position->getPpqPosition())
+                {
+                    int index = getDisplayBufferIndexFromPpq(*ppq);
+                }
             }
         }
     }
@@ -180,6 +185,17 @@ void AudioPluginAudioProcessor::updateDisplayBufferIfNeeded(double bpm)
         displayBuffer.setSize(numChannels, samplesPerBeat, false, true, true);
         displayBuffer.clear();
     }
+}
+
+int AudioPluginAudioProcessor::getDisplayBufferIndexFromPpq(double ppqPosition) const
+{
+    double fractionalBeat = ppqPosition - std::floor(ppqPosition); // range [0.0, 1.0)
+
+    int bufferLength = displayBuffer.getNumSamples();
+    int index = static_cast<int>(fractionalBeat * bufferLength);
+
+    // Safety clamp in case of rounding errors
+    return std::clamp(index, 0, bufferLength - 1);
 }
 
 //==============================================================================
