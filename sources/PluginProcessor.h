@@ -24,6 +24,7 @@ public:
     void updateDisplayBufferIfNeeded(double bpm);
     int getDisplayBufferIndexFromPpq(double ppq) const;
     const juce::AudioBuffer<float>& getDisplayBuffer() const { return displayBuffer; }
+    int getPlayheadIndex() const { return playheadIndex.load(); }
 
     //==============================================================================
     juce::AudioProcessorEditor* createEditor() override;
@@ -52,5 +53,6 @@ private:
     //==============================================================================
     juce::AudioBuffer<float> displayBuffer;
     double displayBufferBpm = -1.0;
+    std::atomic<int> playheadIndex { 0 };
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)
 };

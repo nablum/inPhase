@@ -17,16 +17,18 @@ AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor()
 //==============================================================================
 void AudioPluginAudioProcessorEditor::paint(juce::Graphics& g)
 {
+    // Clear the background
     g.fillAll(juce::Colours::black);
 
+    // Get buffer info and dimensions
     const auto& buffer = processorRef.getDisplayBuffer();
     const int numChannels = buffer.getNumChannels();
     const int numSamples = buffer.getNumSamples();
-
     const int width  = getWidth();
     const int height = getHeight();
     const float midY = height / 2.0f;
 
+    // Draw the waveform for each channel
     for (int ch = 0; ch < numChannels; ++ch)
     {
         const float* samples = buffer.getReadPointer(ch);
@@ -45,6 +47,13 @@ void AudioPluginAudioProcessorEditor::paint(juce::Graphics& g)
         g.setColour(getChannelColour(ch, numChannels));
         g.strokePath(waveform, juce::PathStrokeType(1.5f));
     }
+
+    // Draw a vertical line at the current playhead position
+    int index = processorRef.getPlayheadIndex();
+    int bufferSize = processorRef.getDisplayBuffer().getNumSamples();
+    int cursorX = static_cast<int>(static_cast<float>(index) / bufferSize * getWidth());
+    g.setColour(juce::Colours::white.withAlpha(0.9f));
+    g.drawLine((float)cursorX, 0.0f, (float)cursorX, (float)getHeight(), 1.5f);
 }
 
 void AudioPluginAudioProcessorEditor::resized()

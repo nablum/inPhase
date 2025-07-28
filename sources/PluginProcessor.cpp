@@ -156,6 +156,7 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 if (auto ppq = position->getPpqPosition())
                 {
                     int index = getDisplayBufferIndexFromPpq(*ppq);
+                    playheadIndex.store(index);
                     int displayLength = displayBuffer.getNumSamples();
                     int numSamples = buffer.getNumSamples();
                     int numChannels = buffer.getNumChannels();
