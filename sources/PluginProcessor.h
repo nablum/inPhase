@@ -25,6 +25,9 @@ public:
     int getDisplayBufferIndexFromPpq(double ppq) const;
     const juce::AudioBuffer<float>& getDisplayBuffer() const { return displayBuffer; }
     int getPlayheadIndex() const { return playheadIndex.load(); }
+    void copyToDisplayBuffer(const juce::AudioBuffer<float>& sourceBuffer, int writeStartIndex);
+    void updateUI(const juce::AudioBuffer<float>& buffer);
+    void processAudio(juce::AudioBuffer<float>& buffer);
 
     //==============================================================================
     juce::AudioProcessorEditor* createEditor() override;

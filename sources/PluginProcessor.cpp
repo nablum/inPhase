@@ -142,40 +142,14 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 {
     juce::ignoreUnused(midiMessages);
     juce::ScopedNoDenormals noDenormals;
-
     clearExtraOutputChannels(buffer);
+    updateUI(buffer);
+    processAudio(buffer);
+}
 
-    if (auto* playhead = getPlayHead())
-    {
-        if (auto position = playhead->getPosition())
-        {
-            if (auto bpm = position->getBpm())
-            {
-                updateDisplayBufferIfNeeded(*bpm);
-
-                if (auto ppq = position->getPpqPosition())
-                {
-                    int index = getDisplayBufferIndexFromPpq(*ppq);
-                    playheadIndex.store(index);
-                    int displayLength = displayBuffer.getNumSamples();
-                    int numSamples = buffer.getNumSamples();
-                    int numChannels = buffer.getNumChannels();
-
-                    for (int ch = 0; ch < numChannels; ++ch)
-                    {
-                        const float* in = buffer.getReadPointer(ch);
-
-                        for (int i = 0; i < numSamples; ++i)
-                        {
-                            int writeIndex = (index + i) % displayLength;
-                            displayBuffer.setSample(ch, writeIndex, in[i]);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
+//==============================================================================
+void AudioPluginAudioProcessor::processAudio(juce::AudioBuffer<float>& buffer)
+{
     auto totalNumInputChannels = getTotalNumInputChannels();
 
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
@@ -186,7 +160,27 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     }
 }
 
-//==============================================================================
+void AudioPluginAudioProcessor::updateUI(const juce::AudioBuffer<float>& buffer)
+{
+    if (auto* playhead = getPlayHead())
+    {
+        if (auto position = playhead->getPosition())
+        {
+            if (auto bpm = position->getBpm())
+            {
+                updateDisplayBufferIfNeeded(*bpm);
+            }
+
+            if (auto ppq = position->getPpqPosition())
+            {
+                int index = getDisplayBufferIndexFromPpq(*ppq);
+                playheadIndex.store(index);
+                copyToDisplayBuffer(buffer, index);
+            }
+        }
+    }
+}
+
 void AudioPluginAudioProcessor::updateDisplayBufferIfNeeded(double bpm)
 {
     constexpr double bpmTolerance = 0.01;
@@ -211,6 +205,24 @@ int AudioPluginAudioProcessor::getDisplayBufferIndexFromPpq(double ppqPosition) 
 
     // Safety clamp in case of rounding errors
     return std::clamp(index, 0, bufferLength - 1);
+}
+
+void AudioPluginAudioProcessor::copyToDisplayBuffer(const juce::AudioBuffer<float>& sourceBuffer, int writeStartIndex)
+{
+    int displayLength = displayBuffer.getNumSamples();
+    int numSamples = sourceBuffer.getNumSamples();
+    int numChannels = sourceBuffer.getNumChannels();
+
+    for (int ch = 0; ch < numChannels; ++ch)
+    {
+        const float* in = sourceBuffer.getReadPointer(ch);
+
+        for (int i = 0; i < numSamples; ++i)
+        {
+            int writeIndex = (writeStartIndex + i) % displayLength;
+            displayBuffer.setSample(ch, writeIndex, in[i]);
+        }
+    }
 }
 
 //==============================================================================
