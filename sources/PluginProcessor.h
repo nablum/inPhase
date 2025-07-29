@@ -22,10 +22,10 @@ public:
     //==============================================================================
     void clearExtraOutputChannels (juce::AudioBuffer<float>& buffer);
     void updateDisplayBufferIfNeeded(double bpm);
-    int getDisplayBufferIndexFromPpq(double ppq) const;
+    int getIndexFromPpq(double ppq) const;
     const juce::AudioBuffer<float>& getDisplayBuffer() const { return displayBuffer; }
     int getPlayheadIndex() const { return playheadIndex.load(); }
-    void copyToDisplayBuffer(const juce::AudioBuffer<float>& sourceBuffer, int writeStartIndex);
+    void copyToBuffer(const juce::AudioBuffer<float>& sourceBuffer, juce::AudioBuffer<float>& destinationBuffer, int writeStartIndex);
     void updateUI(const juce::AudioBuffer<float>& buffer);
     void processAudio(juce::AudioBuffer<float>& buffer);
     int findDelayBetweenChannels(const juce::AudioBuffer<float>& buffer, int referenceChannel, int targetChannel, int maxLagSamples);
@@ -58,5 +58,7 @@ private:
     juce::AudioBuffer<float> displayBuffer;
     double displayBufferBpm = -1.0;
     std::atomic<int> playheadIndex { 0 };
+    juce::AudioBuffer<float> analysisBuffer;
+    int analysisBufferWritePos = 0;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)
 };

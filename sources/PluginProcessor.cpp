@@ -117,20 +117,20 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
 {
     juce::ignoreUnused (samplesPerBlock);
 
-    // Example BPM, you might want to fetch this from host or a parameter later
-    double bpm = 120.0;
-
-    // Compute number of samples for 1 beat
-    int samplesPerBeat = static_cast<int>((60.0 / bpm) * sampleRate);
-
-    // Choose the number of channels: same as your plugin's input/output
+    // Number of channels
     int numChannels = getTotalNumOutputChannels();
 
-    // Allocate the buffer: numChannels x samplesPerBeat
-    displayBuffer.setSize(numChannels, samplesPerBeat, false, true, true);
+    // Initialize the display buffer based on the sample rate and BPM
+    double bpm = 120.0; // Example BPM, you might want to fetch this from host or a parameter later
+    int samplesPerBeat = static_cast<int>((60.0 / bpm) * sampleRate); // Compute number of samples for 1 beat
+    displayBuffer.setSize(numChannels, samplesPerBeat, false, true, true); // Allocate the buffer: numChannels x samplesPerBeat
+    displayBuffer.clear(); // Clear buffer to avoid garbage values
 
-    // Clear buffer to avoid garbage values
-    displayBuffer.clear();
+    // Initialize the analysis buffer
+    const int analysisBufferSize = 1024; // Size of the analysis buffer
+    analysisBuffer.setSize(numChannels, analysisBufferSize); // Allocate the analysis buffer
+    analysisBuffer.clear(); // Clear the analysis buffer to avoid garbage values
+    analysisBufferWritePos = 0; // Reset the write position for the analysis buffer
 }
 
 void AudioPluginAudioProcessor::releaseResources()
@@ -145,8 +145,12 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     clearExtraOutputChannels(buffer);
     updateUI(buffer);
     processAudio(buffer);
-    const int maxLagSamples = 1000; // adjust based on frequency content & accuracy needed
-    int delay = findDelayBetweenChannels(buffer, 0, 1, maxLagSamples);
+
+    copyToBuffer(buffer, analysisBuffer, analysisBufferWritePos);
+    analysisBufferWritePos = (analysisBufferWritePos + buffer.getNumSamples()) % analysisBuffer.getNumSamples();
+
+    const int maxLagSamples = analysisBuffer.getNumSamples()/2;
+    int delay = findDelayBetweenChannels(analysisBuffer, 0, 1, maxLagSamples);
 }
 
 //==============================================================================
@@ -175,9 +179,9 @@ void AudioPluginAudioProcessor::updateUI(const juce::AudioBuffer<float>& buffer)
 
             if (auto ppq = position->getPpqPosition())
             {
-                int index = getDisplayBufferIndexFromPpq(*ppq);
+                int index = getIndexFromPpq(*ppq);
                 playheadIndex.store(index);
-                copyToDisplayBuffer(buffer, index);
+                copyToBuffer(buffer, displayBuffer, index);
             }
         }
     }
@@ -198,7 +202,7 @@ void AudioPluginAudioProcessor::updateDisplayBufferIfNeeded(double bpm)
     }
 }
 
-int AudioPluginAudioProcessor::getDisplayBufferIndexFromPpq(double ppqPosition) const
+int AudioPluginAudioProcessor::getIndexFromPpq(double ppqPosition) const
 {
     double fractionalBeat = ppqPosition - std::floor(ppqPosition); // range [0.0, 1.0)
 
@@ -209,20 +213,23 @@ int AudioPluginAudioProcessor::getDisplayBufferIndexFromPpq(double ppqPosition) 
     return std::clamp(index, 0, bufferLength - 1);
 }
 
-void AudioPluginAudioProcessor::copyToDisplayBuffer(const juce::AudioBuffer<float>& sourceBuffer, int writeStartIndex)
+void AudioPluginAudioProcessor::copyToBuffer(const juce::AudioBuffer<float>& sourceBuffer,
+                                             juce::AudioBuffer<float>& destinationBuffer,
+                                             int writeStartIndex)
 {
-    int displayLength = displayBuffer.getNumSamples();
+    int destLength = destinationBuffer.getNumSamples();
     int numSamples = sourceBuffer.getNumSamples();
-    int numChannels = sourceBuffer.getNumChannels();
+    int numChannels = juce::jmin(sourceBuffer.getNumChannels(), destinationBuffer.getNumChannels());
 
     for (int ch = 0; ch < numChannels; ++ch)
     {
         const float* in = sourceBuffer.getReadPointer(ch);
+        float* out = destinationBuffer.getWritePointer(ch);
 
         for (int i = 0; i < numSamples; ++i)
         {
-            int writeIndex = (writeStartIndex + i) % displayLength;
-            displayBuffer.setSample(ch, writeIndex, in[i]);
+            int writeIndex = (writeStartIndex + i) % destLength;
+            out[writeIndex] = in[i];
         }
     }
 }
