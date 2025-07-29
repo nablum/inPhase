@@ -146,12 +146,21 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     updateUI(buffer);
     processAudio(buffer);
 
-    copyToBuffer(buffer, analysisBuffer, analysisBufferWritePos);
-    analysisBufferWritePos = (analysisBufferWritePos + buffer.getNumSamples()) % analysisBuffer.getNumSamples();
-
-    const int maxLagSamples = analysisBuffer.getNumSamples()/2;
-    int delay = findDelayBetweenChannels(analysisBuffer, 0, 1, maxLagSamples);
-    delaySamples.store(delay);
+    // Compute delay sample between channels if playhead is available
+    if (auto* playhead = getPlayHead())
+    {
+        if (auto position = playhead->getPosition())
+        {
+            if (auto isPlaying = position->getIsPlaying())
+            {
+                copyToBuffer(buffer, analysisBuffer, analysisBufferWritePos);
+                analysisBufferWritePos = (analysisBufferWritePos + buffer.getNumSamples()) % analysisBuffer.getNumSamples();
+                const int maxLagSamples = analysisBuffer.getNumSamples()/2;
+                int delay = findDelayBetweenChannels(analysisBuffer, 0, 1, maxLagSamples);
+                delaySamples.store(delay);
+            }
+        }
+    }
 }
 
 //==============================================================================
