@@ -127,7 +127,7 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     displayBuffer.clear(); // Clear buffer to avoid garbage values
 
     // Initialize the analysis buffer
-    const int analysisBufferSize = 1024; // Size of the analysis buffer
+    const int analysisBufferSize = 2048; // Size of the analysis buffer
     analysisBuffer.setSize(numChannels, analysisBufferSize); // Allocate the analysis buffer
     analysisBuffer.clear(); // Clear the analysis buffer to avoid garbage values
     analysisBufferWritePos = 0; // Reset the write position for the analysis buffer
