@@ -254,7 +254,7 @@ int AudioPluginAudioProcessor::findDelayBetweenChannels(const juce::AudioBuffer<
     int bestLag = 0;
     float bestCorrelation = -std::numeric_limits<float>::infinity();
 
-    for (int lag = -maxLagSamples; lag <= maxLagSamples; ++lag)
+    for (int lag = 0; lag <= maxLagSamples; ++lag)
     {
         float sum = 0.0f;
 
