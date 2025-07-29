@@ -28,6 +28,7 @@ public:
     void copyToDisplayBuffer(const juce::AudioBuffer<float>& sourceBuffer, int writeStartIndex);
     void updateUI(const juce::AudioBuffer<float>& buffer);
     void processAudio(juce::AudioBuffer<float>& buffer);
+    int findDelayBetweenChannels(const juce::AudioBuffer<float>& buffer, int referenceChannel, int targetChannel, int maxLagSamples);
 
     //==============================================================================
     juce::AudioProcessorEditor* createEditor() override;

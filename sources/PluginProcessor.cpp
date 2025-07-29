@@ -145,6 +145,8 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     clearExtraOutputChannels(buffer);
     updateUI(buffer);
     processAudio(buffer);
+    const int maxLagSamples = 1000; // adjust based on frequency content & accuracy needed
+    int delay = findDelayBetweenChannels(buffer, 0, 1, maxLagSamples);
 }
 
 //==============================================================================
@@ -223,6 +225,37 @@ void AudioPluginAudioProcessor::copyToDisplayBuffer(const juce::AudioBuffer<floa
             displayBuffer.setSample(ch, writeIndex, in[i]);
         }
     }
+}
+
+int AudioPluginAudioProcessor::findDelayBetweenChannels(const juce::AudioBuffer<float>& buffer, int referenceChannel, int targetChannel, int maxLagSamples)
+{
+    const int numSamples = buffer.getNumSamples();
+
+    const float* ref = buffer.getReadPointer(referenceChannel);
+    const float* target = buffer.getReadPointer(targetChannel);
+
+    int bestLag = 0;
+    float bestCorrelation = -std::numeric_limits<float>::infinity();
+
+    for (int lag = -maxLagSamples; lag <= maxLagSamples; ++lag)
+    {
+        float sum = 0.0f;
+
+        for (int i = 0; i < numSamples; ++i)
+        {
+            int tgtIndex = i + lag;
+            if (tgtIndex >= 0 && tgtIndex < numSamples)
+                sum += ref[i] * target[tgtIndex];
+        }
+
+        if (sum > bestCorrelation)
+        {
+            bestCorrelation = sum;
+            bestLag = lag;
+        }
+    }
+
+    return bestLag;
 }
 
 //==============================================================================
