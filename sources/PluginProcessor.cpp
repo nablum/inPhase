@@ -153,11 +153,23 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         {
             if (auto isPlaying = position->getIsPlaying())
             {
-                copyToBuffer(buffer, analysisBuffer, analysisBufferWritePos);
-                analysisBufferWritePos = (analysisBufferWritePos + buffer.getNumSamples()) % analysisBuffer.getNumSamples();
-                const int maxLagSamples = analysisBuffer.getNumSamples()/2;
-                int delay = findDelayBetweenChannels(analysisBuffer, 0, 1, maxLagSamples);
-                delaySamples.store(delay);
+                if (auto ppq = position->getPpqPosition())
+                {
+                    double fractionalBeat = *ppq - std::floor(*ppq); // Get the fractional part of the PPQ position
+                    if (fractionalBeat > 0.2 && fractionalBeat < 0.8)
+                    {
+                        copyToBuffer(buffer, analysisBuffer, analysisBufferWritePos);
+                        analysisBufferWritePos = (analysisBufferWritePos + buffer.getNumSamples()) % analysisBuffer.getNumSamples();
+                        const int maxLagSamples = analysisBuffer.getNumSamples()/2;
+                        int delay = findDelayBetweenChannels(analysisBuffer, 0, 1, maxLagSamples);
+                        delaySamples.store(delay);
+                    }
+                    else
+                    {
+                        analysisBuffer.clear();
+                        analysisBufferWritePos = 0;
+                    }
+                }
             }
         }
     }
