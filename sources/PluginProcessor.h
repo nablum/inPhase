@@ -29,6 +29,7 @@ public:
     void updateUI(const juce::AudioBuffer<float>& buffer);
     void processAudio(juce::AudioBuffer<float>& buffer);
     int findDelayBetweenChannels(const juce::AudioBuffer<float>& buffer, int referenceChannel, int targetChannel, int maxLagSamples);
+    int getDelaySamples() const { return delaySamples.load(); }
 
     //==============================================================================
     juce::AudioProcessorEditor* createEditor() override;
@@ -60,5 +61,6 @@ private:
     std::atomic<int> playheadIndex { 0 };
     juce::AudioBuffer<float> analysisBuffer;
     int analysisBufferWritePos = 0;
+    std::atomic<int> delaySamples { 0 };
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)
 };

@@ -151,6 +151,7 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
     const int maxLagSamples = analysisBuffer.getNumSamples()/2;
     int delay = findDelayBetweenChannels(analysisBuffer, 0, 1, maxLagSamples);
+    delaySamples.store(delay);
 }
 
 //==============================================================================

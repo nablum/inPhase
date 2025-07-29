@@ -20,6 +20,7 @@ private:
         float hue = static_cast<float>(channelIndex) / juce::jmax(1, totalChannels);
         return juce::Colour::fromHSV(hue, 0.8f, 0.9f, 1.0f); // hue, saturation, brightness, alpha
     }
+    juce::Label delayLabel;
     AudioPluginAudioProcessor& processorRef;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessorEditor)
 };

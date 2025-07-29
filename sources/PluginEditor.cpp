@@ -6,6 +6,13 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     : AudioProcessorEditor (&p), processorRef (p)
 {
     juce::ignoreUnused (processorRef);
+
+    delayLabel.setText("Delay: 0 samples (0.00 ms)", juce::dontSendNotification);
+    delayLabel.setFont(juce::Font(juce::FontOptions(16.f)));
+    delayLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    delayLabel.setJustificationType(juce::Justification::centred);
+    addAndMakeVisible(delayLabel);
+
     setSize (400, 300);
     startTimerHz (30);
 }
@@ -57,10 +64,22 @@ void AudioPluginAudioProcessorEditor::paint(juce::Graphics& g)
 }
 
 void AudioPluginAudioProcessorEditor::resized()
-{
+{    
+    // Place label 10px from right and bottom edges
+    const int labelWidth = 200;
+    const int labelHeight = 30;
+    delayLabel.setBounds(
+        getWidth() - labelWidth - 10,
+        getHeight() - labelHeight - 10,
+        labelWidth,
+        labelHeight
+    );
 }
 
 void AudioPluginAudioProcessorEditor::timerCallback()
 {
+    int delay = processorRef.getDelaySamples();
+    double ms = 1000.0 * delay / processorRef.getSampleRate();
+    delayLabel.setText("Delay: " + juce::String(delay) + " samples (" + juce::String(ms, 2) + " ms)", juce::dontSendNotification);
     repaint();
 }
