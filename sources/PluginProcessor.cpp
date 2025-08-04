@@ -128,13 +128,13 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     displayBuffer.clear(); // Clear buffer to avoid garbage values
 
     // Initialize the analysis buffer
-    const int analysisBufferSize = 2048; // Size of the analysis buffer
+    const int analysisBufferSize = 1024; // Size of the analysis buffer
     analysisBuffer.setSize(numChannels, analysisBufferSize); // Allocate the analysis buffer
     analysisBuffer.clear(); // Clear the analysis buffer to avoid garbage values
     analysisBufferWritePos = 0; // Reset the write position for the analysis buffer
 
     // Initialize the delay line
-    maxDelaySamples = static_cast<int>(getSampleRate() * 0.1f); // 100ms max delay
+    maxDelaySamples = analysisBufferSize;
     delayLine.reset(); // Reset the delay line
     delayLine.prepare({ sampleRate, (juce::uint32)samplesPerBlock, 1 }); // Prepare the delay line
     delayLine.setMaximumDelayInSamples(maxDelaySamples); // Set maximum delay size
@@ -186,8 +186,7 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                     {
                         copyToBuffer(buffer, analysisBuffer, analysisBufferWritePos);
                         analysisBufferWritePos = (analysisBufferWritePos + buffer.getNumSamples()) % analysisBuffer.getNumSamples();
-                        const int maxLagSamples = analysisBuffer.getNumSamples()/2;
-                        int delay = findDelayBetweenChannels(analysisBuffer, 0, 1, maxLagSamples);
+                        int delay = findDelayBetweenChannels(analysisBuffer, 0, 1, analysisBuffer.getNumSamples());
                         if (std::abs(delay - delaySamples.load()) > delayToleranceMs * getSampleRate() / 1000.0)
                         {
                             delaySamples.store(delay); 
