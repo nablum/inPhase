@@ -293,10 +293,13 @@ void AudioPluginAudioProcessor::copyToBuffer(const juce::AudioBuffer<float>& sou
 int AudioPluginAudioProcessor::findDelayBetweenChannels(const juce::AudioBuffer<float>& buffer, int referenceChannel, int targetChannel, int maxLagSamples)
 {
     const int numSamples = buffer.getNumSamples();
-
     const float* ref = buffer.getReadPointer(referenceChannel);
     const float* target = buffer.getReadPointer(targetChannel);
+    return crossCorrelation(ref, target, numSamples, maxLagSamples);
+}
 
+int AudioPluginAudioProcessor::crossCorrelation(const float* ref, const float* target, int numSamples, int maxLagSamples)
+{
     int bestLag = 0;
     float bestCorrelation = -std::numeric_limits<float>::infinity();
 
@@ -307,7 +310,7 @@ int AudioPluginAudioProcessor::findDelayBetweenChannels(const juce::AudioBuffer<
         for (int i = 0; i < numSamples; ++i)
         {
             int tgtIndex = i + lag;
-            if (tgtIndex >= 0 && tgtIndex < numSamples)
+            if (tgtIndex < numSamples)
                 sum += ref[i] * target[tgtIndex];
         }
 
