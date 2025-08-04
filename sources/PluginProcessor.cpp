@@ -153,10 +153,15 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     clearExtraOutputChannels(buffer);
 
     // Apply fixed delay to channel 1 only
-
-    // Only update when significant
     float newTotalDelay = delayLine.getDelay() + delaySamples.load();
-    newTotalDelay = std::clamp(newTotalDelay, 0.0f, static_cast<float>(maxDelaySamples));
+    if (newTotalDelay >= static_cast<float>(maxDelaySamples))
+    {
+        newTotalDelay = 0.0f;
+    }
+    else
+    {
+        newTotalDelay = std::clamp(newTotalDelay, 0.0f, static_cast<float>(maxDelaySamples));
+    }
     delayLine.setDelay(newTotalDelay);
     auto* channelData = buffer.getWritePointer(1);
     for (int i = 0; i < buffer.getNumSamples(); ++i)
