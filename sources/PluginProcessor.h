@@ -62,5 +62,6 @@ private:
     juce::AudioBuffer<float> analysisBuffer;
     int analysisBufferWritePos = 0;
     std::atomic<int> delaySamples { 0 };
+    double delayToleranceMs = 1.0;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)
 };

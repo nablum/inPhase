@@ -162,7 +162,10 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                         analysisBufferWritePos = (analysisBufferWritePos + buffer.getNumSamples()) % analysisBuffer.getNumSamples();
                         const int maxLagSamples = analysisBuffer.getNumSamples()/2;
                         int delay = findDelayBetweenChannels(analysisBuffer, 0, 1, maxLagSamples);
-                        delaySamples.store(delay);
+                        if (std::abs(delay - delaySamples.load()) > delayToleranceMs * getSampleRate() / 1000.0)
+                        {
+                            delaySamples.store(delay); 
+                        }
                     }
                     else
                     {
