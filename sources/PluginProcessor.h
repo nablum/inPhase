@@ -27,7 +27,7 @@ public:
     void updateUI(const juce::AudioBuffer<float>& buffer);
     void processAudio(juce::AudioBuffer<float>& buffer);
     int findDelayBetweenChannels(const juce::AudioBuffer<float>& buffer, int referenceChannel, int targetChannel, int maxLagSamples);
-    int crossCorrelation(const float* ref, const float* target, int numSamples, int maxLagSamples);
+    int crossCorrelation(const float* ref, const float* target, int numSamples, int maxLagSamples, int stepSize);
     int getDelaySamples() const { return delaySamples.load(); }
 
     //==============================================================================
@@ -60,6 +60,7 @@ private:
     std::atomic<int> playheadIndex { 0 };
     juce::AudioBuffer<float> analysisBuffer;
     int analysisBufferWritePos = 0;
+    int crossCorrelationStepSize = 4;
     std::atomic<int> delaySamples { 0 };
     double delayToleranceMs = 1.0;
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> delayLine;
