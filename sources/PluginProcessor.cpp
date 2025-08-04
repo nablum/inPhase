@@ -134,11 +134,11 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     analysisBufferWritePos = 0; // Reset the write position for the analysis buffer
 
     // Initialize the delay line
-    const int maxDelaySamples = 2048; // generous enough for your max delay
-    delayLine.reset();
-    delayLine.prepare({ sampleRate, (juce::uint32)samplesPerBlock, 1 });
-    delayLine.setMaximumDelayInSamples(maxDelaySamples);
-    delayLine.setDelay(350.0f); // Fixed test delay: 350 samples
+    maxDelaySamples = static_cast<int>(getSampleRate() * 0.1f); // 100ms max delay
+    delayLine.reset(); // Reset the delay line
+    delayLine.prepare({ sampleRate, (juce::uint32)samplesPerBlock, 1 }); // Prepare the delay line
+    delayLine.setMaximumDelayInSamples(maxDelaySamples); // Set maximum delay size
+    delayLine.setDelay(0.0f); // Start with no delay
 }
 
 void AudioPluginAudioProcessor::releaseResources()
@@ -153,6 +153,11 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     clearExtraOutputChannels(buffer);
 
     // Apply fixed delay to channel 1 only
+
+    // Only update when significant
+    float newTotalDelay = delayLine.getDelay() + delaySamples.load();
+    newTotalDelay = std::clamp(newTotalDelay, 0.0f, static_cast<float>(maxDelaySamples));
+    delayLine.setDelay(newTotalDelay);
     auto* channelData = buffer.getWritePointer(1);
     for (int i = 0; i < buffer.getNumSamples(); ++i)
     {
@@ -194,7 +199,7 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     }
 
     updateUI(buffer);
-    processAudio(buffer);
+    //processAudio(buffer);
 }
 
 //==============================================================================
