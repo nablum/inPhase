@@ -61,5 +61,6 @@ private:
     int analysisBufferWritePos = 0;
     std::atomic<int> delaySamples { 0 };
     double delayToleranceMs = 1.0;
+    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> delayLine;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)
 };

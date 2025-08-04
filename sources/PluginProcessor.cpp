@@ -132,6 +132,13 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     analysisBuffer.setSize(numChannels, analysisBufferSize); // Allocate the analysis buffer
     analysisBuffer.clear(); // Clear the analysis buffer to avoid garbage values
     analysisBufferWritePos = 0; // Reset the write position for the analysis buffer
+
+    // Initialize the delay line
+    const int maxDelaySamples = 2048; // generous enough for your max delay
+    delayLine.reset();
+    delayLine.prepare({ sampleRate, (juce::uint32)samplesPerBlock, 1 });
+    delayLine.setMaximumDelayInSamples(maxDelaySamples);
+    delayLine.setDelay(350.0f); // Fixed test delay: 350 samples
 }
 
 void AudioPluginAudioProcessor::releaseResources()
@@ -144,8 +151,16 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     juce::ignoreUnused(midiMessages);
     juce::ScopedNoDenormals noDenormals;
     clearExtraOutputChannels(buffer);
-    updateUI(buffer);
-    processAudio(buffer);
+
+    // Apply fixed delay to channel 1 only
+    auto* channelData = buffer.getWritePointer(1);
+    for (int i = 0; i < buffer.getNumSamples(); ++i)
+    {
+        float inputSample = channelData[i];
+        float delayedSample = delayLine.popSample(0);
+        delayLine.pushSample(0, inputSample);
+        channelData[i] = delayedSample;
+    }
 
     // Compute delay sample between channels if playhead is available
     if (auto* playhead = getPlayHead())
@@ -177,6 +192,9 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             }
         }
     }
+
+    updateUI(buffer);
+    processAudio(buffer);
 }
 
 //==============================================================================
