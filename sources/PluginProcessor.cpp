@@ -134,7 +134,7 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     analysisBufferWritePos = 0; // Reset the write position for the analysis buffer
 
     // Initialize the delay line
-    maxDelaySamples = analysisBufferSize;
+    maxDelaySamples = static_cast<int>(sampleRate * 0.1); // Maximum delay in samples (100 ms)
     delayLine.reset(); // Reset the delay line
     delayLine.prepare({ sampleRate, (juce::uint32)samplesPerBlock, 1 }); // Prepare the delay line
     delayLine.setMaximumDelayInSamples(maxDelaySamples); // Set maximum delay size
@@ -149,23 +149,28 @@ void AudioPluginAudioProcessor::releaseResources()
 }
 
 void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
-                                              juce::MidiBuffer& midiMessages)
+                                             juce::MidiBuffer& midiMessages)
 {
     juce::ignoreUnused(midiMessages);
     juce::ScopedNoDenormals noDenormals;
     clearExtraOutputChannels(buffer);
 
-    // Apply fixed delay to channel 1 only
-    float newTotalDelay = delayLine.getDelay() + delaySamples.load();
-    if (newTotalDelay >= static_cast<float>(maxDelaySamples))
-    {
-        newTotalDelay = 0.0f;
-    }
-    else
-    {
-        newTotalDelay = std::clamp(newTotalDelay, 0.0f, static_cast<float>(maxDelaySamples));
-    }
+    // === 1. Apply adaptive delay to channel 1 only ===
+    float currentDelay = delayLine.getDelay();
+    float estimatedDelay = static_cast<float>(delaySamples.load());
+    float learningRate = 0.2f; // Between 0 and 1 for smooth convergence
+
+    // Gradient descent-like update
+    float error = estimatedDelay - currentDelay;
+    float newTotalDelay = currentDelay + learningRate * error;
+
+    // Ensure the new delay is within bounds
+    newTotalDelay = static_cast<float>(static_cast<int>(newTotalDelay) % maxDelaySamples);
+
+    // Update the delay line with the new delay
     delayLine.setDelay(newTotalDelay);
+
+    // Apply delay to channel 1
     auto* channelData = buffer.getWritePointer(1);
     for (int i = 0; i < buffer.getNumSamples(); ++i)
     {
@@ -175,7 +180,7 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         channelData[i] = delayedSample;
     }
 
-    // Compute delay sample between channels if playhead is available
+    // === 2. Compute new delay estimate if host is playing and beat is centered ===
     if (auto* playhead = getPlayHead())
     {
         if (auto position = playhead->getPosition())
@@ -184,16 +189,13 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             {
                 if (auto ppq = position->getPpqPosition())
                 {
-                    double fractionalBeat = *ppq - std::floor(*ppq); // Get the fractional part of the PPQ position
+                    double fractionalBeat = *ppq - std::floor(*ppq);
                     if (fractionalBeat > 0.2 && fractionalBeat < 0.8)
                     {
                         copyToBuffer(buffer, analysisBuffer, analysisBufferWritePos);
                         analysisBufferWritePos = (analysisBufferWritePos + buffer.getNumSamples()) % analysisBuffer.getNumSamples();
                         int delay = findDelayBetweenChannels(analysisBuffer, 0, 1, analysisBuffer.getNumSamples());
-                        if (std::abs(delay - delaySamples.load()) > delayToleranceMs * getSampleRate() / 1000.0)
-                        {
-                            delaySamples.store(delay); 
-                        }
+                        delaySamples.store(delay); // this feeds into adaptive update above
                     }
                     else
                     {
@@ -206,22 +208,9 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     }
 
     updateUI(buffer);
-    //processAudio(buffer);
 }
 
 //==============================================================================
-void AudioPluginAudioProcessor::processAudio(juce::AudioBuffer<float>& buffer)
-{
-    auto totalNumInputChannels = getTotalNumInputChannels();
-
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer(channel);
-        juce::ignoreUnused(channelData);
-        // ..do something to the data...
-    }
-}
-
 void AudioPluginAudioProcessor::updateUI(const juce::AudioBuffer<float>& buffer)
 {
     if (auto* playhead = getPlayHead())
