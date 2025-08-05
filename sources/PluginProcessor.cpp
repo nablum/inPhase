@@ -175,7 +175,7 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     // === 1. Apply adaptive delay to channel 1 only ===
     float currentDelay = delayLine.getDelay();
     float estimatedDelay = static_cast<float>(delaySamples.load());
-    float learningRate = 0.05f; // Between 0 and 1 for smooth convergence
+    float learningRate = 0.2f; // Between 0 and 1 for smooth convergence
 
     // Gradient descent-like update
     float error = estimatedDelay - currentDelay;
