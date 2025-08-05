@@ -27,6 +27,7 @@ public:
     void updateUI(const juce::AudioBuffer<float>& buffer);
     int findDelayBetweenChannels(const juce::AudioBuffer<float>& buffer, int referenceChannel, int targetChannel, int maxLagSamples);
     int crossCorrelation(const float* ref, const float* target, int numSamples, int maxLagSamples, int stepSize);
+    int peakAlignment(const float* ref, const float* target, int numSamples);
     int getDelaySamples() const { return delaySamples.load(); }
 
     //==============================================================================

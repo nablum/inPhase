@@ -158,7 +158,7 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     // === 1. Apply adaptive delay to channel 1 only ===
     float currentDelay = delayLine.getDelay();
     float estimatedDelay = static_cast<float>(delaySamples.load());
-    float learningRate = 0.2f; // Between 0 and 1 for smooth convergence
+    float learningRate = 0.05f; // Between 0 and 1 for smooth convergence
 
     // Gradient descent-like update
     float error = estimatedDelay - currentDelay;
@@ -194,7 +194,8 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                     {
                         copyToBuffer(buffer, analysisBuffer, analysisBufferWritePos);
                         analysisBufferWritePos = (analysisBufferWritePos + buffer.getNumSamples()) % analysisBuffer.getNumSamples();
-                        int delay = findDelayBetweenChannels(analysisBuffer, 0, 1, analysisBuffer.getNumSamples());
+                        //int delay = findDelayBetweenChannels(analysisBuffer, 0, 1, analysisBuffer.getNumSamples());
+                        int delay = findDelayBetweenChannels(buffer, 0, 1, buffer.getNumSamples());
                         delaySamples.store(delay); // this feeds into adaptive update above
                     }
                     else
@@ -284,7 +285,8 @@ int AudioPluginAudioProcessor::findDelayBetweenChannels(const juce::AudioBuffer<
     const int numSamples = buffer.getNumSamples();
     const float* ref = buffer.getReadPointer(referenceChannel);
     const float* target = buffer.getReadPointer(targetChannel);
-    return crossCorrelation(ref, target, numSamples, maxLagSamples, crossCorrelationStepSize);
+    //return crossCorrelation(ref, target, numSamples, maxLagSamples, crossCorrelationStepSize);
+    return peakAlignment(ref, target, numSamples);
 }
 
 int AudioPluginAudioProcessor::crossCorrelation(const float* ref, const float* target, int numSamples, int maxLagSamples, int stepSize)
@@ -311,6 +313,31 @@ int AudioPluginAudioProcessor::crossCorrelation(const float* ref, const float* t
     }
 
     return bestLag;
+}
+
+int AudioPluginAudioProcessor::peakAlignment(const float* ref, const float* target, int numSamples)
+{
+    int refMaxIdx = 0;
+    int targetMaxIdx = 0;
+    float refMax = -std::numeric_limits<float>::infinity();
+    float targetMax = -std::numeric_limits<float>::infinity();
+
+    for (int i = 0; i < numSamples; ++i)
+    {
+        if (ref[i] > refMax)
+        {
+            refMax = ref[i];
+            refMaxIdx = i;
+        }
+
+        if (target[i] > targetMax)
+        {
+            targetMax = target[i];
+            targetMaxIdx = i;
+        }
+    }
+
+    return targetMaxIdx - refMaxIdx;
 }
 
 //==============================================================================
