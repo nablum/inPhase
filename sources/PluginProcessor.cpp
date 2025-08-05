@@ -11,7 +11,8 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                       #endif
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
-                       )
+                       ),
+                    parameters(*this, nullptr, "PARAMETERS", createParameterLayout())
 {
 }
 
@@ -84,6 +85,16 @@ void AudioPluginAudioProcessor::changeProgramName (int index, const juce::String
     juce::ignoreUnused (index, newName);
 }
 
+juce::AudioProcessorValueTreeState::ParameterLayout AudioPluginAudioProcessor::createParameterLayout()
+{
+    std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>("leftPPQ", "Left PPQ", 0.0f, 1.0f, 0.2f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>("rightPPQ", "Right PPQ", 0.0f, 1.0f, 0.8f));
+
+    return { params.begin(), params.end() };
+}
+
 //==============================================================================
 bool AudioPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
@@ -139,6 +150,10 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     delayLine.prepare({ sampleRate, (juce::uint32)samplesPerBlock, 1 }); // Prepare the delay line
     delayLine.setMaximumDelayInSamples(maxDelaySamples); // Set maximum delay size
     delayLine.setDelay(0.0f); // Start with no delay
+
+    // Retrieve and store parameter pointers
+    leftPPQBound  = parameters.getRawParameterValue("leftPPQ");
+    rightPPQBound = parameters.getRawParameterValue("rightPPQ");
 }
 
 void AudioPluginAudioProcessor::releaseResources()
@@ -146,6 +161,8 @@ void AudioPluginAudioProcessor::releaseResources()
     displayBuffer.clear();
     analysisBuffer.clear();
     delayLine.reset();
+    leftPPQBound = nullptr;
+    rightPPQBound = nullptr;
 }
 
 void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
@@ -190,7 +207,7 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 if (auto ppq = position->getPpqPosition())
                 {
                     double fractionalBeat = *ppq - std::floor(*ppq);
-                    if (fractionalBeat > 0.2 && fractionalBeat < 0.8)
+                    if (fractionalBeat > *leftPPQBound && fractionalBeat < *rightPPQBound && leftPPQBound != nullptr && rightPPQBound != nullptr)
                     {
                         copyToBuffer(buffer, analysisBuffer, analysisBufferWritePos);
                         analysisBufferWritePos = (analysisBufferWritePos + buffer.getNumSamples()) % analysisBuffer.getNumSamples();

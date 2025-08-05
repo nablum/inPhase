@@ -62,6 +62,21 @@ void AudioPluginAudioProcessorEditor::paint(juce::Graphics& g)
     int cursorX = static_cast<int>(static_cast<float>(index) / bufferSize * getWidth());
     g.setColour(juce::Colours::white.withAlpha(0.9f));
     g.drawLine((float)cursorX, 0.0f, (float)cursorX, (float)getHeight(), 1.5f);
+
+    // Draw vertical lines for delay bounds
+    if (auto* leftPPQ = processorRef.getValueTreeState().getRawParameterValue("leftPPQ"))
+    {
+        float leftX = *leftPPQ * width;
+        g.setColour(juce::Colours::green);
+        g.drawLine(leftX, 0.0f, leftX, (float)height, 2.0f);
+    }
+
+    if (auto* rightPPQ = processorRef.getValueTreeState().getRawParameterValue("rightPPQ"))
+    {
+        float rightX = *rightPPQ * width;
+        g.setColour(juce::Colours::red);
+        g.drawLine(rightX, 0.0f, rightX, (float)height, 2.0f);
+    }
 }
 
 void AudioPluginAudioProcessorEditor::resized()
@@ -83,4 +98,49 @@ void AudioPluginAudioProcessorEditor::timerCallback()
     double ms = 1000.0 * delay / processorRef.getSampleRate();
     delayLabel.setText("Delay: " + juce::String(delay) + " samples (" + juce::String(ms, 2) + " ms)", juce::dontSendNotification);
     repaint();
+}
+
+void AudioPluginAudioProcessorEditor::mouseDrag(const juce::MouseEvent& event)
+{
+    float x = juce::jlimit(0.0f, (float)getWidth(), (float)event.x);
+    float fractional = x / (float)getWidth();
+
+    if (draggingLeft)
+    {
+        if (auto* param = processorRef.getValueTreeState().getParameter("leftPPQ"))
+            param->setValueNotifyingHost(fractional);
+    }
+    else if (draggingRight)
+    {
+        if (auto* param = processorRef.getValueTreeState().getParameter("rightPPQ"))
+            param->setValueNotifyingHost(fractional);
+    }
+
+    repaint();
+}
+
+void AudioPluginAudioProcessorEditor::mouseDown(const juce::MouseEvent& event)
+{
+    float x = (float)event.x;
+    float width = (float)getWidth();
+
+    auto* leftPPQ = processorRef.getValueTreeState().getRawParameterValue("leftPPQ");
+    auto* rightPPQ = processorRef.getValueTreeState().getRawParameterValue("rightPPQ");
+
+    if (leftPPQ != nullptr && rightPPQ != nullptr)
+    {
+        float leftX = *leftPPQ * width;
+        float rightX = *rightPPQ * width;
+
+        if (std::abs(x - leftX) < barGrabRadius)
+            draggingLeft = true;
+        else if (std::abs(x - rightX) < barGrabRadius)
+            draggingRight = true;
+    }
+}
+
+void AudioPluginAudioProcessorEditor::mouseUp(const juce::MouseEvent&)
+{
+    draggingLeft = false;
+    draggingRight = false;
 }

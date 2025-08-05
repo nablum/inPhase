@@ -29,6 +29,10 @@ public:
     int crossCorrelation(const float* ref, const float* target, int numSamples, int maxLagSamples, int stepSize);
     int peakAlignment(const float* ref, const float* target, int numSamples);
     int getDelaySamples() const { return delaySamples.load(); }
+    float getLeftPPQ() const { return leftPPQBound->load(); }
+    float getRightPPQ() const { return rightPPQBound->load(); }
+    juce::AudioProcessorValueTreeState& getValueTreeState() { return parameters; }
+    juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
     //==============================================================================
     juce::AudioProcessorEditor* createEditor() override;
@@ -65,5 +69,8 @@ private:
     double delayToleranceMs = 1.0;
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> delayLine;
     int maxDelaySamples = 0;
+    juce::AudioProcessorValueTreeState parameters;
+    std::atomic<float>* leftPPQBound = nullptr;
+    std::atomic<float>* rightPPQBound = nullptr;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)
 };
