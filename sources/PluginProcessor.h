@@ -66,7 +66,7 @@ private:
     int analysisBufferWritePos = 0;
     int crossCorrelationStepSize = 4;
     std::atomic<int> delaySamples { 0 };
-    double delayToleranceMs = 1.0;
+    float delayToleranceMs = 0.1f;
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> delayLine;
     int maxDelaySamples = 0;
     juce::AudioProcessorValueTreeState parameters;

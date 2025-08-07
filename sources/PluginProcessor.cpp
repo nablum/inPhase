@@ -172,9 +172,12 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     juce::ScopedNoDenormals noDenormals;
     clearExtraOutputChannels(buffer);
 
-    // === 1. Apply adaptive delay to channel 1 only ===
-    float currentDelay = delayLine.getDelay();
+    // Adaptive delay processing
     float estimatedDelay = static_cast<float>(delaySamples.load());
+    if (estimatedDelay > (delayToleranceMs * getSampleRate() / 1000.0f))
+    {
+        // === 1. Apply adaptive delay to channel 1 only ===
+        float currentDelay = delayLine.getDelay();
     float learningRate = 0.2f; // Between 0 and 1 for smooth convergence
 
     // Gradient descent-like update
@@ -186,6 +189,7 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
     // Update the delay line with the new delay
     delayLine.setDelay(newTotalDelay);
+    }
 
     // Apply delay to channel 1
     auto* channelData = buffer.getWritePointer(1);
