@@ -178,17 +178,17 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     {
         // === 1. Apply adaptive delay to channel 1 only ===
         float currentDelay = delayLine.getDelay();
-    float learningRate = 0.2f; // Between 0 and 1 for smooth convergence
+        float learningRate = 0.2f; // Between 0 and 1 for smooth convergence
 
-    // Gradient descent-like update
-    float error = estimatedDelay - currentDelay;
-    float newTotalDelay = currentDelay + learningRate * error;
+        // Gradient descent-like update
+        float error = estimatedDelay - currentDelay;
+        float newTotalDelay = currentDelay + learningRate * error;
 
-    // Ensure the new delay is within bounds
-    newTotalDelay = static_cast<float>(static_cast<int>(newTotalDelay) % maxDelaySamples);
+        // Ensure the new delay is within bounds
+        newTotalDelay = static_cast<float>(static_cast<int>(newTotalDelay) % maxDelaySamples);
 
-    // Update the delay line with the new delay
-    delayLine.setDelay(newTotalDelay);
+        // Update the delay line with the new delay
+        delayLine.setDelay(newTotalDelay);        
     }
 
     // Apply delay to channel 1
@@ -215,8 +215,8 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                     {
                         copyToBuffer(buffer, analysisBuffer, analysisBufferWritePos);
                         analysisBufferWritePos = (analysisBufferWritePos + buffer.getNumSamples()) % analysisBuffer.getNumSamples();
-                        //int delay = findDelayBetweenChannels(analysisBuffer, 0, 1, analysisBuffer.getNumSamples());
-                        int delay = findDelayBetweenChannels(buffer, 0, 1, buffer.getNumSamples());
+                        int delay = findDelayBetweenChannels(analysisBuffer, 0, 1, analysisBuffer.getNumSamples());
+                        //int delay = findDelayBetweenChannels(buffer, 0, 1, buffer.getNumSamples());
                         delaySamples.store(delay); // this feeds into adaptive update above
                     }
                     else
@@ -306,8 +306,8 @@ int AudioPluginAudioProcessor::findDelayBetweenChannels(const juce::AudioBuffer<
     const int numSamples = buffer.getNumSamples();
     const float* ref = buffer.getReadPointer(referenceChannel);
     const float* target = buffer.getReadPointer(targetChannel);
-    //return crossCorrelation(ref, target, numSamples, maxLagSamples, crossCorrelationStepSize);
-    return peakAlignment(ref, target, numSamples);
+    return crossCorrelation(ref, target, numSamples, buffer.getNumSamples(), crossCorrelationStepSize);
+    //return peakAlignment(ref, target, numSamples);
 }
 
 int AudioPluginAudioProcessor::crossCorrelation(const float* ref, const float* target, int numSamples, int maxLagSamples, int stepSize)
