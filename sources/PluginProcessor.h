@@ -67,7 +67,7 @@ private:
     int crossCorrelationStepSize = 4;
     std::atomic<int> delaySamples { 0 };
     float delayToleranceMs = 0.1f;
-    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> delayLine;
+    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Lagrange3rd> delayLine;
     int maxDelaySamples = 0;
     juce::AudioProcessorValueTreeState parameters;
     std::atomic<float>* leftPPQBound = nullptr;
