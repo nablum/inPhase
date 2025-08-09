@@ -68,7 +68,7 @@ private:
     std::atomic<int> delaySamples { 0 };
     float delayToleranceMs = 0.1f;
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Lagrange3rd> delayLine;
-    int maxDelaySamples = 0;
+    float audioPluginCutOffFrequency = 30.0f;
     juce::AudioProcessorValueTreeState parameters;
     std::atomic<float>* leftPPQBound = nullptr;
     std::atomic<float>* rightPPQBound = nullptr;

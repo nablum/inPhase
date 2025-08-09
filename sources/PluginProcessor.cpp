@@ -138,22 +138,22 @@ void AudioPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPer
     displayBuffer.setSize(numChannels, samplesPerBeat, false, true, true); // Allocate the buffer: numChannels x samplesPerBeat
     displayBuffer.clear(); // Clear buffer to avoid garbage values
 
-    // Initialize the analysis buffer
-    const int analysisBufferSize = 2048; // Size of the analysis buffer
-    analysisBuffer.setSize(numChannels, analysisBufferSize); // Allocate the analysis buffer
-    analysisBuffer.clear(); // Clear the analysis buffer to avoid garbage values
-    analysisBufferWritePos = 0; // Reset the write position for the analysis buffer
-
     // Initialize the delay line
-    maxDelaySamples = static_cast<int>(sampleRate * 0.1); // Maximum delay in samples (100 ms)
+    int maxDelaySamples = static_cast<int>(sampleRate / audioPluginCutOffFrequency); // Maximum delay in samples
     delayLine.reset(); // Reset the delay line
     delayLine.prepare({ sampleRate, (juce::uint32)samplesPerBlock, 1 }); // Prepare the delay line
     delayLine.setMaximumDelayInSamples(maxDelaySamples); // Set maximum delay size
     delayLine.setDelay(0.0f); // Start with no delay
 
+    // Initialize the analysis buffer
+    const int analysisBufferSize = juce::nextPowerOfTwo(maxDelaySamples); // Size of the analysis buffer
+    analysisBuffer.setSize(numChannels, analysisBufferSize); // Allocate the analysis buffer
+    analysisBuffer.clear(); // Clear the analysis buffer to avoid garbage values
+    analysisBufferWritePos = 0; // Reset the write position for the analysis buffer
+
     // Retrieve and store parameter pointers
-    leftPPQBound  = parameters.getRawParameterValue("leftPPQ");
-    rightPPQBound = parameters.getRawParameterValue("rightPPQ");
+    leftPPQBound  = parameters.getRawParameterValue("leftPPQ"); // Pointer to the left PPQ parameter
+    rightPPQBound = parameters.getRawParameterValue("rightPPQ"); // Pointer to the right PPQ parameter
 }
 
 void AudioPluginAudioProcessor::releaseResources()
@@ -185,7 +185,7 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         float newTotalDelay = currentDelay + learningRate * error;
 
         // Ensure the new delay is within bounds
-        newTotalDelay = static_cast<float>(static_cast<int>(newTotalDelay) % maxDelaySamples);
+        newTotalDelay = static_cast<float>(static_cast<int>(newTotalDelay) % delayLine.getMaximumDelayInSamples());
 
         // Update the delay line with the new delay
         delayLine.setDelay(newTotalDelay);        
