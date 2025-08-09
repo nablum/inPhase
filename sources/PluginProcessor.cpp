@@ -308,7 +308,7 @@ int AudioPluginAudioProcessor::findDelayBetweenChannels(const juce::AudioBuffer<
     const int numSamples = buffer.getNumSamples();
     const float* ref = buffer.getReadPointer(referenceChannel);
     const float* target = buffer.getReadPointer(targetChannel);
-    return crossCorrelation(ref, target, numSamples, buffer.getNumSamples(), crossCorrelationStepSize);
+    return crossCorrelation(ref, target, numSamples, maxLagSamples, crossCorrelationStepSize);
     //return peakAlignment(ref, target, numSamples);
 }
 
