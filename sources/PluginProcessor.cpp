@@ -204,13 +204,10 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                         float estimatedDelay = static_cast<float>(delaySamples.load());
                         if (std::abs(estimatedDelay) > (delayToleranceMs * getSampleRate() / 1000.0f))
                         {
-                            // === 1. Apply adaptive delay to channel 1 only ===
-                            float currentDelay = delayLine.getDelay();
-                            float learningRate = 0.2f; // Between 0 and 1 for smooth convergence
-
                             // Gradient descent-like update
+                            float currentDelay = delayLine.getDelay();
                             float error = estimatedDelay - currentDelay;
-                            float newTotalDelay = currentDelay + learningRate * error;
+                            float newTotalDelay = currentDelay + learningRate.load() * error;
 
                             // Ensure the new delay is within bounds
                             newTotalDelay = static_cast<float>(static_cast<int>(newTotalDelay) % delayLine.getMaximumDelayInSamples());

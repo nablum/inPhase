@@ -14,6 +14,12 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     delayLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(delayLabel);
 
+    learningRateSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    learningRateSlider.setRange(0.0, 1.0, 0.01);
+    learningRateSlider.setValue(processorRef.getLearningRate());
+    learningRateSlider.addListener(this);
+    addAndMakeVisible(learningRateSlider);
+
     setSize (400, 300);
     startTimerHz (30);
 }
@@ -90,6 +96,8 @@ void AudioPluginAudioProcessorEditor::resized()
         labelWidth,
         labelHeight
     );
+
+    learningRateSlider.setBounds(10, 10, getWidth() - 20, 30);
 }
 
 void AudioPluginAudioProcessorEditor::timerCallback()
@@ -143,4 +151,12 @@ void AudioPluginAudioProcessorEditor::mouseUp(const juce::MouseEvent&)
 {
     draggingLeft = false;
     draggingRight = false;
+}
+
+void AudioPluginAudioProcessorEditor::sliderValueChanged(juce::Slider* slider)
+{
+    if (slider == &learningRateSlider)
+    {
+        processorRef.setLearningRate((float)learningRateSlider.getValue());
+    }
 }

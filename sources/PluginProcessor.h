@@ -33,6 +33,8 @@ public:
     float getRightPPQ() const { return rightPPQBound->load(); }
     juce::AudioProcessorValueTreeState& getValueTreeState() { return parameters; }
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+    void setLearningRate(float newValue) { learningRate.store(newValue); }
+    float getLearningRate() const { return learningRate.load(); }
 
     //==============================================================================
     juce::AudioProcessorEditor* createEditor() override;
@@ -72,5 +74,6 @@ private:
     juce::AudioProcessorValueTreeState parameters;
     std::atomic<float>* leftPPQBound = nullptr;
     std::atomic<float>* rightPPQBound = nullptr;
+    std::atomic<float> learningRate { 0.2f };
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)
 };

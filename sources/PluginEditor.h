@@ -3,7 +3,7 @@
 #include "PluginProcessor.h"
 
 //==============================================================================
-class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor, private juce::Timer
+class AudioPluginAudioProcessorEditor final : public juce::AudioProcessorEditor, private juce::Timer, public juce::Slider::Listener
 {
 public:
     explicit AudioPluginAudioProcessorEditor (AudioPluginAudioProcessor&);
@@ -15,6 +15,7 @@ public:
     void mouseDown(const juce::MouseEvent& event) override;
     void mouseDrag(const juce::MouseEvent& event) override;
     void mouseUp(const juce::MouseEvent&) override;
+    void sliderValueChanged(juce::Slider* slider) override;
 
 private:
     void timerCallback() override;
@@ -27,6 +28,7 @@ private:
     float barGrabRadius = 5.0f;
     bool draggingLeft = false;
     bool draggingRight = false;
+    juce::Slider learningRateSlider;
     AudioPluginAudioProcessor& processorRef;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessorEditor)
 };
