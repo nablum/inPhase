@@ -24,7 +24,8 @@ public:
     const juce::AudioBuffer<float>& getDisplayBuffer() const { return displayBuffer; }
     int getPlayheadIndex() const { return playheadIndex.load(); }
     void updateUI(juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& reference);
-    int findDelayBetweenChannels(const juce::AudioBuffer<float>& buffer, int referenceChannel, int targetChannel, int maxLagSamples);
+    int findDelay(juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& reference);
+    void updateDelay(int delay);
     int crossCorrelation(const float* ref, const float* target, int numSamples, int maxLagSamples, int stepSize);
     int peakAlignment(const float* ref, const float* target, int numSamples);
     void stereoToMono(juce::AudioBuffer<float>& buffer);

@@ -190,7 +190,12 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         channelData[i] = delayedSample;
     }
 
-    // === 2. Compute new delay estimate if host is playing ===
+    copyBuffer(input, 0, output, 0, 0, output.getNumSamples());
+    copyBuffer(input, 0, output, 1, 0, output.getNumSamples());
+
+    updateUI(input, reference);
+
+    // === 2. Compute new delay if host is playing ===
     if (auto* playhead = getPlayHead())
     {
         if (auto position = playhead->getPosition())
@@ -202,30 +207,9 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                     double fractionalBeat = *ppq - std::floor(*ppq);
                     if (fractionalBeat > *leftPPQBound && fractionalBeat < *rightPPQBound && leftPPQBound != nullptr && rightPPQBound != nullptr)
                     {
-                        copyBuffer(reference, 0, analysisBuffer, 0, analysisBufferWritePos, input.getNumSamples(), true);
-                        copyBuffer(input, 0, analysisBuffer, 1, analysisBufferWritePos, input.getNumSamples(), true);
-                        analysisBufferWritePos = (analysisBufferWritePos + buffer.getNumSamples()) % analysisBuffer.getNumSamples();
-                        int delay = findDelayBetweenChannels(analysisBuffer, 0, 1, analysisBuffer.getNumSamples());
-                        //int delay = findDelayBetweenChannels(buffer, 0, 1, buffer.getNumSamples());
-                        delaySamples.store(delay); // this feeds into adaptive update above
-
-                        // Adaptive delay processing
-                        float estimatedDelay = static_cast<float>(delaySamples.load());
-                        if (std::abs(estimatedDelay) > (delayToleranceMs * getSampleRate() / 1000.0f))
-                        {
-                            // Gradient descent-like update
-                            float currentDelay = delayLine.getDelay();
-                            float error = estimatedDelay - currentDelay;
-                            float newTotalDelay = currentDelay + learningRate.load() * error;
-
-                            // Ensure the new delay is within bounds
-                            newTotalDelay = static_cast<float>(static_cast<int>(newTotalDelay) % delayLine.getMaximumDelayInSamples());
-                            //newTotalDelay = std::clamp(newTotalDelay, 0.0f, static_cast<float>(delayLine.getMaximumDelayInSamples()));
-
-                            // Update the delay line with the new delay
-                            delayLine.setDelay(newTotalDelay);        
-                        }
-
+                        int delay = findDelay(input, reference);
+                        delaySamples.store(delay);
+                        updateDelay(delay);
                     }
                     else
                     {
@@ -236,12 +220,6 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             }
         }
     }
-
-    updateUI(input, reference);
-
-    copyBuffer(input, 0, output, 0, 0, output.getNumSamples());      // Copy input L
-    copyBuffer(input, 0, output, 1, 0, output.getNumSamples());      // Copy input R
-
 }
 
 //==============================================================================
@@ -326,13 +304,34 @@ void AudioPluginAudioProcessor::copyBuffer(const juce::AudioBuffer<float>& src, 
         dst.copyFrom(dstChannel, 0, src, srcChannel, firstChunk, secondChunk);
 }
 
-int AudioPluginAudioProcessor::findDelayBetweenChannels(const juce::AudioBuffer<float>& buffer, int referenceChannel, int targetChannel, int maxLagSamples)
+int AudioPluginAudioProcessor::findDelay(juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& reference)
 {
-    const int numSamples = buffer.getNumSamples();
-    const float* ref = buffer.getReadPointer(referenceChannel);
-    const float* target = buffer.getReadPointer(targetChannel);
-    return crossCorrelation(ref, target, numSamples, maxLagSamples, crossCorrelationStepSize);
-    //return peakAlignment(ref, target, numSamples);
+    copyBuffer(reference, 0, analysisBuffer, 0, analysisBufferWritePos, input.getNumSamples(), true);
+    copyBuffer(input, 0, analysisBuffer, 1, analysisBufferWritePos, input.getNumSamples(), true);
+    analysisBufferWritePos = (analysisBufferWritePos + input.getNumSamples()) % analysisBuffer.getNumSamples();
+
+    const int numSamples = analysisBuffer.getNumSamples();
+    const float* ref = analysisBuffer.getReadPointer(0);
+    const float* target = analysisBuffer.getReadPointer(1);
+    return crossCorrelation(ref, target, numSamples, numSamples, crossCorrelationStepSize);
+}
+
+void AudioPluginAudioProcessor::updateDelay(int delay)
+{
+    if (std::abs(delay) > (delayToleranceMs * getSampleRate() / 1000.0f))
+    {
+        // Gradient descent
+        float currentDelay = delayLine.getDelay();
+        float error = delay - currentDelay;
+        float newDelay = currentDelay + learningRate.load() * error;
+
+        // Ensure the new delay is within bounds
+        newDelay = static_cast<float>(static_cast<int>(newDelay) % delayLine.getMaximumDelayInSamples());
+        //newDelay = std::clamp(newDelay, 0.0f, static_cast<float>(delayLine.getMaximumDelayInSamples()));
+
+        // Update the delay line with the new delay
+        delayLine.setDelay(delay);
+    }
 }
 
 int AudioPluginAudioProcessor::crossCorrelation(const float* ref, const float* target, int numSamples, int maxLagSamples, int stepSize)
