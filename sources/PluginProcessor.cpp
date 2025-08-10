@@ -177,25 +177,10 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     auto reference = getBusBuffer(buffer, true, 1);
     auto output = getBusBuffer(buffer, false, 0);
 
-    stereoToMono(input);
-    stereoToMono(reference);
-
-    // === 1. Apply delay ===
-    auto* channelData = input.getWritePointer(0);
-    for (int i = 0; i < input.getNumSamples(); ++i)
-    {
-        float inputSample = channelData[i];
-        float delayedSample = delayLine.popSample(0);
-        delayLine.pushSample(0, inputSample);
-        channelData[i] = delayedSample;
-    }
-
-    copyBuffer(input, 0, output, 0, 0, output.getNumSamples());
-    copyBuffer(input, 0, output, 1, 0, output.getNumSamples());
-
+    processAudio(input, reference, output);
     updateUI(input, reference);
 
-    // === 2. Compute new delay if host is playing ===
+    // Compute new delay if host is playing
     if (auto* playhead = getPlayHead())
     {
         if (auto position = playhead->getPosition())
@@ -223,6 +208,27 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 }
 
 //==============================================================================
+void AudioPluginAudioProcessor::processAudio(juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& reference, juce::AudioBuffer<float>& output)
+{
+    // Convert stereo to mono
+    stereoToMono(input);
+    stereoToMono(reference);
+
+    // Apply delay to the input buffer
+    auto* channelData = input.getWritePointer(0);
+    for (int i = 0; i < input.getNumSamples(); ++i)
+    {
+        float inputSample = channelData[i];
+        float delayedSample = delayLine.popSample(0);
+        delayLine.pushSample(0, inputSample);
+        channelData[i] = delayedSample;
+    }
+
+    // Copy mono input to stereo output
+    copyBuffer(input, 0, output, 0, 0, output.getNumSamples());
+    copyBuffer(input, 0, output, 1, 0, output.getNumSamples());
+}
+
 void AudioPluginAudioProcessor::updateUI(juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& reference)
 {
     if (auto* playhead = getPlayHead())

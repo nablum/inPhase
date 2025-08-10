@@ -18,6 +18,7 @@ public:
     using AudioProcessor::processBlock;
 
     //==============================================================================
+    void processAudio(juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& reference, juce::AudioBuffer<float>& output);
     void clearExtraOutputChannels (juce::AudioBuffer<float>& buffer);
     void updateDisplayBufferIfNeeded(double bpm);
     int getIndexFromPpq(double ppq) const;
