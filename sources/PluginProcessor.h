@@ -28,6 +28,8 @@ public:
     int findDelayBetweenChannels(const juce::AudioBuffer<float>& buffer, int referenceChannel, int targetChannel, int maxLagSamples);
     int crossCorrelation(const float* ref, const float* target, int numSamples, int maxLagSamples, int stepSize);
     int peakAlignment(const float* ref, const float* target, int numSamples);
+    void stereoToMono(juce::AudioBuffer<float>& buffer);
+    void safeCopy(juce::AudioBuffer<float>& dst, int dstChannel, const juce::AudioBuffer<float>& src, int srcChannel, int numSamples);
     int getDelaySamples() const { return delaySamples.load(); }
     float getLeftPPQ() const { return leftPPQBound->load(); }
     float getRightPPQ() const { return rightPPQBound->load(); }

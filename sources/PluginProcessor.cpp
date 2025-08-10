@@ -8,6 +8,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                      #if ! JucePlugin_IsMidiEffect
                       #if ! JucePlugin_IsSynth
                        .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
+                       .withInput ("Reference", juce::AudioChannelSet::stereo(), true)
                       #endif
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
@@ -172,7 +173,19 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     juce::ScopedNoDenormals noDenormals;
     clearExtraOutputChannels(buffer);
 
-    // Apply delay to channel 1
+    auto input = getBusBuffer(buffer, true, 0);
+    auto reference = getBusBuffer(buffer, true, 1);
+    auto output = getBusBuffer(buffer, false, 0);
+
+    stereoToMono(input);
+    stereoToMono(reference);
+
+    safeCopy(output, 0, input, 0, output.getNumSamples());      // Copy input L
+    safeCopy(output, 1, reference, 0, output.getNumSamples());  // Copy reference to R
+
+    updateUI(output);
+
+    /* // Apply delay to channel 1
     auto* channelData = buffer.getWritePointer(1);
     for (int i = 0; i < buffer.getNumSamples(); ++i)
     {
@@ -228,7 +241,7 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         }
     }
 
-    updateUI(buffer);
+    updateUI(buffer); */
 }
 
 //==============================================================================
@@ -358,6 +371,38 @@ int AudioPluginAudioProcessor::peakAlignment(const float* ref, const float* targ
     }
 
     return targetMaxIdx - refMaxIdx;
+}
+
+void AudioPluginAudioProcessor::stereoToMono(juce::AudioBuffer<float>& buffer)
+{
+    const int numChannels = buffer.getNumChannels();
+    const int numSamples = buffer.getNumSamples();
+
+    if (numChannels <= 1 || numSamples == 0)
+        return; // already mono or empty
+
+    // Sum all channels into the first channel
+    for (int ch = 1; ch < numChannels; ++ch)
+        buffer.addFrom(0, 0, buffer, ch, 0, numSamples);
+
+    // Average the result to prevent gain increase
+    buffer.applyGain(0, 0, numSamples, 1.0f / (float) numChannels);
+
+    // Optional: clear other channels
+    for (int ch = 1; ch < numChannels; ++ch)
+        buffer.clear(ch, 0, numSamples);
+}
+
+void AudioPluginAudioProcessor::safeCopy(juce::AudioBuffer<float>& dst, int dstChannel,
+              const juce::AudioBuffer<float>& src, int srcChannel,
+              int numSamples)
+{
+    if (dstChannel < dst.getNumChannels() &&
+        srcChannel < src.getNumChannels() &&
+        numSamples > 0)
+    {
+        dst.copyFrom(dstChannel, 0, src, srcChannel, 0, numSamples);
+    }
 }
 
 //==============================================================================
