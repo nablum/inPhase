@@ -23,13 +23,15 @@ public:
     int getIndexFromPpq(double ppq) const;
     const juce::AudioBuffer<float>& getDisplayBuffer() const { return displayBuffer; }
     int getPlayheadIndex() const { return playheadIndex.load(); }
-    void copyToBuffer(const juce::AudioBuffer<float>& sourceBuffer, juce::AudioBuffer<float>& destinationBuffer, int writeStartIndex);
-    void updateUI(const juce::AudioBuffer<float>& buffer);
+    void updateUI(juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& reference);
     int findDelayBetweenChannels(const juce::AudioBuffer<float>& buffer, int referenceChannel, int targetChannel, int maxLagSamples);
     int crossCorrelation(const float* ref, const float* target, int numSamples, int maxLagSamples, int stepSize);
     int peakAlignment(const float* ref, const float* target, int numSamples);
     void stereoToMono(juce::AudioBuffer<float>& buffer);
-    void safeCopy(juce::AudioBuffer<float>& dst, int dstChannel, const juce::AudioBuffer<float>& src, int srcChannel, int numSamples);
+    void copyBuffer(const juce::AudioBuffer<float>& src, int srcChannel,
+                    juce::AudioBuffer<float>& dst, int dstChannel,
+                    int writeStartIndex, int numSamples,
+                    bool wrapAround = false);
     int getDelaySamples() const { return delaySamples.load(); }
     float getLeftPPQ() const { return leftPPQBound->load(); }
     float getRightPPQ() const { return rightPPQBound->load(); }

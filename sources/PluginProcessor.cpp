@@ -180,14 +180,9 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     stereoToMono(input);
     stereoToMono(reference);
 
-    safeCopy(output, 0, input, 0, output.getNumSamples());      // Copy input L
-    safeCopy(output, 1, reference, 0, output.getNumSamples());  // Copy reference to R
-
-    updateUI(output);
-
-    /* // Apply delay to channel 1
-    auto* channelData = buffer.getWritePointer(1);
-    for (int i = 0; i < buffer.getNumSamples(); ++i)
+    // === 1. Apply delay ===
+    auto* channelData = input.getWritePointer(0);
+    for (int i = 0; i < input.getNumSamples(); ++i)
     {
         float inputSample = channelData[i];
         float delayedSample = delayLine.popSample(0);
@@ -195,7 +190,7 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         channelData[i] = delayedSample;
     }
 
-    // === 2. Compute new delay estimate if host is playing and beat is centered ===
+    // === 2. Compute new delay estimate if host is playing ===
     if (auto* playhead = getPlayHead())
     {
         if (auto position = playhead->getPosition())
@@ -207,7 +202,8 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                     double fractionalBeat = *ppq - std::floor(*ppq);
                     if (fractionalBeat > *leftPPQBound && fractionalBeat < *rightPPQBound && leftPPQBound != nullptr && rightPPQBound != nullptr)
                     {
-                        copyToBuffer(buffer, analysisBuffer, analysisBufferWritePos);
+                        copyBuffer(reference, 0, analysisBuffer, 0, analysisBufferWritePos, input.getNumSamples(), true);
+                        copyBuffer(input, 0, analysisBuffer, 1, analysisBufferWritePos, input.getNumSamples(), true);
                         analysisBufferWritePos = (analysisBufferWritePos + buffer.getNumSamples()) % analysisBuffer.getNumSamples();
                         int delay = findDelayBetweenChannels(analysisBuffer, 0, 1, analysisBuffer.getNumSamples());
                         //int delay = findDelayBetweenChannels(buffer, 0, 1, buffer.getNumSamples());
@@ -241,11 +237,15 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         }
     }
 
-    updateUI(buffer); */
+    updateUI(input, reference);
+
+    copyBuffer(input, 0, output, 0, 0, output.getNumSamples());      // Copy input L
+    copyBuffer(input, 0, output, 1, 0, output.getNumSamples());      // Copy input R
+
 }
 
 //==============================================================================
-void AudioPluginAudioProcessor::updateUI(const juce::AudioBuffer<float>& buffer)
+void AudioPluginAudioProcessor::updateUI(juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& reference)
 {
     if (auto* playhead = getPlayHead())
     {
@@ -260,7 +260,8 @@ void AudioPluginAudioProcessor::updateUI(const juce::AudioBuffer<float>& buffer)
             {
                 int index = getIndexFromPpq(*ppq);
                 playheadIndex.store(index);
-                copyToBuffer(buffer, displayBuffer, index);
+                copyBuffer(input, 0, displayBuffer, 0, index, input.getNumSamples(), true);
+                copyBuffer(reference, 0, displayBuffer, 1, index, reference.getNumSamples(), true);
             }
         }
     }
@@ -292,25 +293,37 @@ int AudioPluginAudioProcessor::getIndexFromPpq(double ppqPosition) const
     return std::clamp(index, 0, bufferLength - 1);
 }
 
-void AudioPluginAudioProcessor::copyToBuffer(const juce::AudioBuffer<float>& sourceBuffer,
-                                             juce::AudioBuffer<float>& destinationBuffer,
-                                             int writeStartIndex)
+void AudioPluginAudioProcessor::copyBuffer(const juce::AudioBuffer<float>& src, int srcChannel,
+                      juce::AudioBuffer<float>& dst, int dstChannel,
+                      int writeStartIndex, int numSamples,
+                      bool wrapAround)
 {
-    int destLength = destinationBuffer.getNumSamples();
-    int numSamples = sourceBuffer.getNumSamples();
-    int numChannels = juce::jmin(sourceBuffer.getNumChannels(), destinationBuffer.getNumChannels());
+    int destLength = dst.getNumSamples();
 
-    for (int ch = 0; ch < numChannels; ++ch)
+    // Safety checks
+    if (srcChannel >= src.getNumChannels() ||
+        dstChannel >= dst.getNumChannels() ||
+        numSamples <= 0 || destLength <= 0)
+        return;
+
+    if (!wrapAround)
     {
-        const float* in = sourceBuffer.getReadPointer(ch);
-        float* out = destinationBuffer.getWritePointer(ch);
-
-        for (int i = 0; i < numSamples; ++i)
-        {
-            int writeIndex = (writeStartIndex + i) % destLength;
-            out[writeIndex] = in[i];
-        }
+        int samplesToCopy = std::min(numSamples, destLength - writeStartIndex);
+        dst.copyFrom(dstChannel, writeStartIndex, src, srcChannel, 0, samplesToCopy);
+        return;
     }
+
+    // Wrap-around case
+    int firstChunk = std::min(numSamples, destLength - writeStartIndex);
+    int secondChunk = numSamples - firstChunk;
+
+    // Copy first part
+    if (firstChunk > 0)
+        dst.copyFrom(dstChannel, writeStartIndex, src, srcChannel, 0, firstChunk);
+
+    // Copy wrapped part to beginning
+    if (secondChunk > 0)
+        dst.copyFrom(dstChannel, 0, src, srcChannel, firstChunk, secondChunk);
 }
 
 int AudioPluginAudioProcessor::findDelayBetweenChannels(const juce::AudioBuffer<float>& buffer, int referenceChannel, int targetChannel, int maxLagSamples)
@@ -391,18 +404,6 @@ void AudioPluginAudioProcessor::stereoToMono(juce::AudioBuffer<float>& buffer)
     // Optional: clear other channels
     for (int ch = 1; ch < numChannels; ++ch)
         buffer.clear(ch, 0, numSamples);
-}
-
-void AudioPluginAudioProcessor::safeCopy(juce::AudioBuffer<float>& dst, int dstChannel,
-              const juce::AudioBuffer<float>& src, int srcChannel,
-              int numSamples)
-{
-    if (dstChannel < dst.getNumChannels() &&
-        srcChannel < src.getNumChannels() &&
-        numSamples > 0)
-    {
-        dst.copyFrom(dstChannel, 0, src, srcChannel, 0, numSamples);
-    }
 }
 
 //==============================================================================
