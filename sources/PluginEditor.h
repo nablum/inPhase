@@ -28,7 +28,7 @@ private:
         case 1:
             return juce::Colours::white.withAlpha(0.5f);
         default:
-            return juce::Colours::red;;
+            return juce::Colours::red;
         }
     }
     juce::Label delayLabel;
@@ -36,6 +36,8 @@ private:
     bool draggingLeft = false;
     bool draggingRight = false;
     juce::Slider learningRateSlider;
+    juce::Rectangle<int> waveformAreaRect;
+    float controlPanelRatio = 1.0f / 8.0f;
     AudioPluginAudioProcessor& processorRef;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessorEditor)
 };
