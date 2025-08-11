@@ -48,6 +48,7 @@ public:
     void updateDelay(int delay);
     int crossCorrelation(const float* ref, const float* target, int numSamples, int maxLagSamples, int stepSize);
     int peakAlignment(const float* ref, const float* target, int numSamples);
+    int fftPhaseDelay(const juce::AudioBuffer<float>& buffer);
     void stereoToMono(juce::AudioBuffer<float>& buffer);
     void copyBuffer(const juce::AudioBuffer<float>& src, int srcChannel,
                     juce::AudioBuffer<float>& dst, int dstChannel,

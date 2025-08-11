@@ -325,6 +325,7 @@ int AudioPluginAudioProcessor::findDelay(juce::AudioBuffer<float>& input, juce::
     const float* ref = analysisBuffer.getReadPointer(0);
     const float* target = analysisBuffer.getReadPointer(1);
     return crossCorrelation(ref, target, numSamples, numSamples, crossCorrelationStepSize);
+    //return fftPhaseDelay(analysisBuffer);
 }
 
 void AudioPluginAudioProcessor::updateDelay(int delay)
@@ -396,6 +397,74 @@ int AudioPluginAudioProcessor::peakAlignment(const float* ref, const float* targ
     }
 
     return targetMaxIdx - refMaxIdx;
+}
+
+int AudioPluginAudioProcessor::fftPhaseDelay(const juce::AudioBuffer<float>& buffer)
+{
+    // Use the minimum power of two for FFT size
+    int numSamples = buffer.getNumSamples();
+    int fftOrder = static_cast<int>(std::ceil(std::log2(numSamples)));
+    int fftSize = 1 << fftOrder;
+
+    juce::dsp::FFT fft(fftOrder);
+
+    // Prepare buffers (zero-padded)
+    juce::HeapBlock<juce::dsp::Complex<float>> refFFT(fftSize);
+    juce::HeapBlock<juce::dsp::Complex<float>> targetFFT(fftSize);
+    zeromem(refFFT, sizeof(juce::dsp::Complex<float>) * static_cast<size_t>(fftSize));
+    zeromem(targetFFT, sizeof(juce::dsp::Complex<float>) * static_cast<size_t>(fftSize));
+
+    // Copy input to real part
+    auto* refData = buffer.getReadPointer(0);
+    auto* targetData = buffer.getReadPointer(1);
+    for (int i = 0; i < numSamples; ++i)
+    {
+        refFFT[i].real(refData[i]);
+        targetFFT[i].real(targetData[i]);
+    }
+
+    // Perform FFT in-place
+    fft.perform(refFFT, refFFT, false);
+    fft.perform(targetFFT, targetFFT, false);
+
+    // Compute cross-spectrum and accumulate phase difference
+    double phaseSum = 0.0;
+    int phaseCount = 0;
+
+    for (int bin = 1; bin < fftSize / 2; ++bin) // skip DC
+    {
+        auto refC = refFFT[bin];
+        auto tgtC = targetFFT[bin];
+
+        float refMag = std::abs(refC);
+        float tgtMag = std::abs(tgtC);
+
+        if (refMag > 1e-6f && tgtMag > 1e-6f)
+        {
+            float phaseRef = std::atan2(refC.imag(), refC.real());
+            float phaseTgt = std::atan2(tgtC.imag(), tgtC.real());
+            float phaseDiff = phaseTgt - phaseRef;
+
+            // Wrap to [-pi, pi]
+            while (phaseDiff > juce::MathConstants<float>::pi)
+                phaseDiff -= juce::MathConstants<float>::twoPi;
+            while (phaseDiff < -juce::MathConstants<float>::pi)
+                phaseDiff += juce::MathConstants<float>::twoPi;
+
+            // Estimate delay for this bin
+            float freq = (float)bin / fftSize; // normalized frequency
+            if (freq > 0.0f)
+            {
+                float delay = phaseDiff / (2.0f * juce::MathConstants<float>::pi * freq);
+                phaseSum += delay;
+                ++phaseCount;
+            }
+        }
+    }
+
+    // Average delay estimate
+    float avgDelay = (phaseCount > 0) ? static_cast<float>(phaseSum / phaseCount) : 0.0f;
+    return static_cast<int>(std::round(avgDelay));
 }
 
 void AudioPluginAudioProcessor::stereoToMono(juce::AudioBuffer<float>& buffer)
