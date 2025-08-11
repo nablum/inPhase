@@ -15,7 +15,8 @@ AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor (AudioPluginAud
     addAndMakeVisible(delayLabel);
 
     learningRateSlider.setSliderStyle(juce::Slider::LinearHorizontal);
-    learningRateSlider.setRange(0.0, 1.0, 0.01);
+    learningRateSlider.setRange(Params::learningRateMin,
+        Params::learningRateMax,Params::learningRateSensitivity);
     learningRateSlider.setValue(processorRef.getLearningRate());
     learningRateSlider.addListener(this);
     addAndMakeVisible(learningRateSlider);

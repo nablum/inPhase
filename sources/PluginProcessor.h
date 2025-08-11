@@ -1,6 +1,25 @@
 #pragma once
 
 //==============================================================================
+namespace Params
+{
+    // Left/Right PPQ
+    constexpr float leftPPQMin   = 0.0f;
+    constexpr float leftPPQMax   = 1.0f;
+    constexpr float leftPPQDefault = 0.2f;
+
+    constexpr float rightPPQMin   = 0.0f;
+    constexpr float rightPPQMax   = 1.0f;
+    constexpr float rightPPQDefault = 0.8f;
+
+    // Learning Rate
+    constexpr float learningRateMin   = 0.0f;
+    constexpr float learningRateMax   = 0.5f;
+    constexpr float learningRateDefault = 0.25f;
+    constexpr float learningRateSensitivity = 0.01f;
+}
+
+//==============================================================================
 class AudioPluginAudioProcessor final : public juce::AudioProcessor
 {
 public:
@@ -39,8 +58,17 @@ public:
     float getRightPPQ() const { return rightPPQBound->load(); }
     juce::AudioProcessorValueTreeState& getValueTreeState() { return parameters; }
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
-    void setLearningRate(float newValue) { learningRate.store(newValue); }
-    float getLearningRate() const { return learningRate.load(); }
+    float getLearningRate() const
+    {
+        if (auto* p = parameters.getRawParameterValue("learningRate"))
+            return *p;
+        return Params::learningRateDefault;
+    }
+    void setLearningRate(float newValue)
+    {
+        if (auto* p = parameters.getParameter("learningRate"))
+            p->setValueNotifyingHost((newValue - p->getNormalisableRange().start) / (p->getNormalisableRange().end - p->getNormalisableRange().start));
+    }
 
     //==============================================================================
     juce::AudioProcessorEditor* createEditor() override;
@@ -80,6 +108,5 @@ private:
     juce::AudioProcessorValueTreeState parameters;
     std::atomic<float>* leftPPQBound = nullptr;
     std::atomic<float>* rightPPQBound = nullptr;
-    std::atomic<float> learningRate { 0.2f };
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)
 };

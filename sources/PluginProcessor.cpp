@@ -88,10 +88,15 @@ void AudioPluginAudioProcessor::changeProgramName (int index, const juce::String
 
 juce::AudioProcessorValueTreeState::ParameterLayout AudioPluginAudioProcessor::createParameterLayout()
 {
+    using namespace Params;
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
 
-    params.push_back(std::make_unique<juce::AudioParameterFloat>("leftPPQ", "Left PPQ", 0.0f, 1.0f, 0.2f));
-    params.push_back(std::make_unique<juce::AudioParameterFloat>("rightPPQ", "Right PPQ", 0.0f, 1.0f, 0.8f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "leftPPQ", "Left PPQ", leftPPQMin, leftPPQMax, leftPPQDefault));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "rightPPQ", "Right PPQ", rightPPQMin, rightPPQMax, rightPPQDefault));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "learningRate", "Learning Rate", learningRateMin, learningRateMax, learningRateDefault));
 
     return { params.begin(), params.end() };
 }
@@ -329,7 +334,9 @@ void AudioPluginAudioProcessor::updateDelay(int delay)
         // Gradient descent
         float currentDelay = delayLine.getDelay();
         float error = delay - currentDelay;
-        float newDelay = currentDelay + learningRate.load() * error;
+        auto* learningRateParam = parameters.getRawParameterValue("learningRate");
+        float learningRate = learningRateParam != nullptr ? static_cast<float>(*learningRateParam) : 0.25f;
+        float newDelay = currentDelay + learningRate * error;
 
         // Ensure the new delay is within bounds
         newDelay = static_cast<float>(static_cast<int>(newDelay) % delayLine.getMaximumDelayInSamples());
