@@ -6,18 +6,15 @@
 [![Python Version](https://img.shields.io/badge/python-3.6%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Phase detection audio plugin built with [JUCE](https://juce.com) and CMake.  
-Supports building as VST3, AU, and standalone (depending on your platform).
+Audio plugin for phase alignment developed in C++ with [JUCE](https://juce.com) and CMake.
 
-<!--
 <p align="center">
   <img
-    src="image-link"
+    src="https://github.com/user-attachments/assets/4ae690e6-b46b-4a27-9e40-f000ef349599"
     alt="UI Screenshot"
     width="600"
   />
 </p>
--->
 
 ## 🛠️ Requirements
 
