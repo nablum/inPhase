@@ -59,7 +59,7 @@ void AudioPluginAudioProcessorEditor::paint(juce::Graphics& g)
             waveform.lineTo((float)x, y);
         }
 
-        g.setColour(getChannelColour(ch, numChannels));
+        g.setColour(getChannelColour(ch));
         g.strokePath(waveform, juce::PathStrokeType(1.5f));
     }
 
@@ -67,21 +67,21 @@ void AudioPluginAudioProcessorEditor::paint(juce::Graphics& g)
     int index = processorRef.getPlayheadIndex();
     int bufferSize = processorRef.getDisplayBuffer().getNumSamples();
     int cursorX = static_cast<int>(static_cast<float>(index) / bufferSize * getWidth());
-    g.setColour(juce::Colours::white.withAlpha(0.9f));
+    g.setColour(juce::Colours::greenyellow);
     g.drawLine((float)cursorX, 0.0f, (float)cursorX, (float)getHeight(), 1.5f);
 
     // Draw vertical lines for delay bounds
     if (auto* leftPPQ = processorRef.getValueTreeState().getRawParameterValue("leftPPQ"))
     {
         float leftX = *leftPPQ * width;
-        g.setColour(juce::Colours::green);
+        g.setColour(juce::Colours::white.withAlpha(0.8f));
         g.drawLine(leftX, 0.0f, leftX, (float)height, 2.0f);
     }
 
     if (auto* rightPPQ = processorRef.getValueTreeState().getRawParameterValue("rightPPQ"))
     {
         float rightX = *rightPPQ * width;
-        g.setColour(juce::Colours::red);
+        g.setColour(juce::Colours::white.withAlpha(0.8f));
         g.drawLine(rightX, 0.0f, rightX, (float)height, 2.0f);
     }
 }
