@@ -9,7 +9,7 @@ cmake_minimum_required(VERSION 3.22)
 # `project()` command. `project()` sets up some helpful variables that describe source/binary
 # directories, and the current project version. This is a standard CMake command.
 
-project(phaseDetector VERSION 0.0.1)
+project(inPhase VERSION 0.0.1)
 
 # If you've installed JUCE somehow (via a package manager, or directly using the CMake install
 # target), you'll need to tell this project that it depends on the installed copy of JUCE. If you've
@@ -47,8 +47,8 @@ juce_add_plugin(${PROJECT_NAME}
     PLUGIN_CODE Dem0                            # A unique four-character plugin id with exactly one upper-case character
                                                 # GarageBand 10.3 requires the first letter to be upper-case, and the remaining letters to be lower-case
     FORMATS VST3                                # The formats to build. Other valid formats are: Standalone AAX Unity VST AU AUv3
-    PLUGIN_NAME "phaseDetector"                 # The name of the plugin, which will be used in the plugin's metadata
-    PRODUCT_NAME "phaseDetector")               # The name of the final executable, which can differ from the target name
+    PLUGIN_NAME ${PROJECT_NAME}                 # The name of the plugin, which will be used in the plugin's metadata
+    PRODUCT_NAME ${PROJECT_NAME})               # The name of the final executable, which can differ from the target name
 
 # `juce_generate_juce_header` will create a JuceHeader.h for a given target, which will be generated
 # into your build tree. This should be included with `#include <JuceHeader.h>`. The include path for
@@ -89,7 +89,7 @@ target_compile_definitions(${PROJECT_NAME}
 # static library. These source files can be of any kind (wav data, images, fonts, icons etc.).
 # Conversion to binary-data will happen when your target is built.
 
-# juce_add_binary_data(phaseDetectorData SOURCES ...)
+# juce_add_binary_data(inPhaseData SOURCES ...)
 
 # `target_link_libraries` links libraries and JUCE modules to other libraries or executables. Here,
 # we're linking our executable target to the `juce::juce_audio_utils` module. Inter-module
@@ -99,7 +99,7 @@ target_compile_definitions(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
-        # phaseDetectorData # If we'd created a binary data target, we'd link to it here
+        # inPhaseData # If we'd created a binary data target, we'd link to it here
         juce::juce_audio_utils
         juce::juce_dsp
     PUBLIC

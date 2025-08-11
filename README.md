@@ -1,4 +1,10 @@
-# Phase Detector
+<p align="left">
+  <img
+    src="https://github.com/user-attachments/assets/9cfd1c63-2a2c-4d6d-904c-be0e96d22e40"
+    alt="logo"
+    width="200"
+  />
+</p>
 
 ![Platforms](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-brightgreen.svg)
 ![JUCE](https://img.shields.io/badge/made%20with-JUCE-brightgreen.svg)
@@ -42,8 +48,8 @@ This project uses a Python helper script to configure and build the plugin using
 
 ```bash
 # Clone the repository
-git clone --recurse-submodules https://github.com/nablum/phaseDetector.git
-cd phaseDetector
+git clone --recurse-submodules https://github.com/nablum/inPhase.git
+cd inPhase
 
 # Run the build script (Release build by default)
 python3 build.py
