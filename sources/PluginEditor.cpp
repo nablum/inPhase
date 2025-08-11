@@ -70,19 +70,26 @@ void AudioPluginAudioProcessorEditor::paint(juce::Graphics& g)
     g.setColour(juce::Colours::greenyellow);
     g.drawLine((float)cursorX, 0.0f, (float)cursorX, (float)getHeight(), 1.5f);
 
-    // Draw vertical lines for delay bounds
-    if (auto* leftPPQ = processorRef.getValueTreeState().getRawParameterValue("leftPPQ"))
+    // Draw computation area
+    auto* leftPPQ = processorRef.getValueTreeState().getRawParameterValue("leftPPQ");
+    auto* rightPPQ = processorRef.getValueTreeState().getRawParameterValue("rightPPQ");
+    if (leftPPQ != nullptr && rightPPQ != nullptr)
     {
+        // Get the positions of the boundaries
         float leftX = *leftPPQ * width;
-        g.setColour(juce::Colours::white.withAlpha(0.8f));
-        g.drawLine(leftX, 0.0f, leftX, (float)height, 2.0f);
-    }
-
-    if (auto* rightPPQ = processorRef.getValueTreeState().getRawParameterValue("rightPPQ"))
-    {
         float rightX = *rightPPQ * width;
-        g.setColour(juce::Colours::white.withAlpha(0.8f));
+
+        // Draw left boundary line
+        g.setColour(juce::Colours::white.withAlpha(0.7f));
+        g.drawLine(leftX, 0.0f, leftX, (float)height, 2.0f);
+
+        // Draw right boundary line
+        g.setColour(juce::Colours::white.withAlpha(0.7f));
         g.drawLine(rightX, 0.0f, rightX, (float)height, 2.0f);
+
+        // Draw semi-transparent white rectangle between cursors
+        g.setColour(juce::Colours::white.withAlpha(0.2f));
+        g.fillRect(leftX, 0.0f, rightX - leftX, (float)getHeight());
     }
 }
 
