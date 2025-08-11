@@ -114,15 +114,22 @@ void AudioPluginAudioProcessorEditor::mouseDrag(const juce::MouseEvent& event)
     float x = juce::jlimit(0.0f, (float)getWidth(), (float)event.x);
     float fractional = x / (float)getWidth();
 
-    if (draggingLeft)
+    auto* leftParam = processorRef.getValueTreeState().getParameter("leftPPQ");
+    auto* rightParam = processorRef.getValueTreeState().getParameter("rightPPQ");
+    auto* leftPPQ = processorRef.getValueTreeState().getRawParameterValue("leftPPQ");
+    auto* rightPPQ = processorRef.getValueTreeState().getRawParameterValue("rightPPQ");
+
+    if (draggingLeft && leftParam && rightPPQ)
     {
-        if (auto* param = processorRef.getValueTreeState().getParameter("leftPPQ"))
-            param->setValueNotifyingHost(fractional);
+        // Clamp leftPPQ to be less than rightPPQ
+        float newLeft = std::min(fractional, *rightPPQ - 0.01f); // 0.01f is a small margin
+        leftParam->setValueNotifyingHost(newLeft);
     }
-    else if (draggingRight)
+    else if (draggingRight && rightParam && leftPPQ)
     {
-        if (auto* param = processorRef.getValueTreeState().getParameter("rightPPQ"))
-            param->setValueNotifyingHost(fractional);
+        // Clamp rightPPQ to be greater than leftPPQ
+        float newRight = std::max(fractional, *leftPPQ + 0.01f); // 0.01f is a small margin
+        rightParam->setValueNotifyingHost(newRight);
     }
 
     repaint();
