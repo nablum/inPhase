@@ -18,14 +18,14 @@ public:
     using AudioProcessor::processBlock;
 
     //==============================================================================
-    void processAudio(juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& reference, juce::AudioBuffer<float>& output);
+    void processAudio(juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& sidechain, juce::AudioBuffer<float>& output);
     void clearExtraOutputChannels (juce::AudioBuffer<float>& buffer);
     void updateDisplayBufferIfNeeded(double bpm);
     int getIndexFromPpq(double ppq) const;
     const juce::AudioBuffer<float>& getDisplayBuffer() const { return displayBuffer; }
     int getPlayheadIndex() const { return playheadIndex.load(); }
-    void updateUI(juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& reference);
-    int findDelay(juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& reference);
+    void updateUI(juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& sidechain);
+    int findDelay(juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& sidechain);
     void updateDelay(int delay);
     int crossCorrelation(const float* ref, const float* target, int numSamples, int maxLagSamples, int stepSize);
     int peakAlignment(const float* ref, const float* target, int numSamples);

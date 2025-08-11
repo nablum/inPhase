@@ -8,7 +8,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                      #if ! JucePlugin_IsMidiEffect
                       #if ! JucePlugin_IsSynth
                        .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
-                       .withInput ("Reference", juce::AudioChannelSet::stereo(), true)
+                       .withInput ("Sidechain", juce::AudioChannelSet::mono(), false)
                       #endif
                        .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                      #endif
@@ -174,11 +174,11 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     clearExtraOutputChannels(buffer);
 
     auto input = getBusBuffer(buffer, true, 0);
-    auto reference = getBusBuffer(buffer, true, 1);
+    auto sidechain = getBusBuffer(buffer, true, 1);
     auto output = getBusBuffer(buffer, false, 0);
 
-    processAudio(input, reference, output);
-    updateUI(input, reference);
+    processAudio(input, sidechain, output);
+    updateUI(input, sidechain);
 
     // Compute new delay if host is playing
     if (auto* playhead = getPlayHead())
@@ -192,7 +192,7 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                     double fractionalBeat = *ppq - std::floor(*ppq);
                     if (fractionalBeat > *leftPPQBound && fractionalBeat < *rightPPQBound && leftPPQBound != nullptr && rightPPQBound != nullptr)
                     {
-                        int delay = findDelay(input, reference);
+                        int delay = findDelay(input, sidechain);
                         delaySamples.store(delay);
                         updateDelay(delay);
                     }
@@ -208,13 +208,13 @@ void AudioPluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 }
 
 //==============================================================================
-void AudioPluginAudioProcessor::processAudio(juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& reference, juce::AudioBuffer<float>& output)
+void AudioPluginAudioProcessor::processAudio(juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& sidechain, juce::AudioBuffer<float>& output)
 {
     // Convert stereo to mono
     stereoToMono(input);
-    stereoToMono(reference);
+    stereoToMono(sidechain);
 
-    // Apply delay to the input buffer
+    // Delay input
     auto* channelData = input.getWritePointer(0);
     for (int i = 0; i < input.getNumSamples(); ++i)
     {
@@ -229,7 +229,7 @@ void AudioPluginAudioProcessor::processAudio(juce::AudioBuffer<float>& input, ju
     copyBuffer(input, 0, output, 1, 0, output.getNumSamples());
 }
 
-void AudioPluginAudioProcessor::updateUI(juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& reference)
+void AudioPluginAudioProcessor::updateUI(juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& sidechain)
 {
     if (auto* playhead = getPlayHead())
     {
@@ -245,7 +245,7 @@ void AudioPluginAudioProcessor::updateUI(juce::AudioBuffer<float>& input, juce::
                 int index = getIndexFromPpq(*ppq);
                 playheadIndex.store(index);
                 copyBuffer(input, 0, displayBuffer, 0, index, input.getNumSamples(), true);
-                copyBuffer(reference, 0, displayBuffer, 1, index, reference.getNumSamples(), true);
+                copyBuffer(sidechain, 0, displayBuffer, 1, index, sidechain.getNumSamples(), true);
             }
         }
     }
@@ -310,9 +310,9 @@ void AudioPluginAudioProcessor::copyBuffer(const juce::AudioBuffer<float>& src, 
         dst.copyFrom(dstChannel, 0, src, srcChannel, firstChunk, secondChunk);
 }
 
-int AudioPluginAudioProcessor::findDelay(juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& reference)
+int AudioPluginAudioProcessor::findDelay(juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& sidechain)
 {
-    copyBuffer(reference, 0, analysisBuffer, 0, analysisBufferWritePos, input.getNumSamples(), true);
+    copyBuffer(sidechain, 0, analysisBuffer, 0, analysisBufferWritePos, input.getNumSamples(), true);
     copyBuffer(input, 0, analysisBuffer, 1, analysisBufferWritePos, input.getNumSamples(), true);
     analysisBufferWritePos = (analysisBufferWritePos + input.getNumSamples()) % analysisBuffer.getNumSamples();
 
