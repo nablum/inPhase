@@ -336,7 +336,7 @@ void AudioPluginAudioProcessor::updateDelay(int delay)
         //newDelay = std::clamp(newDelay, 0.0f, static_cast<float>(delayLine.getMaximumDelayInSamples()));
 
         // Update the delay line with the new delay
-        delayLine.setDelay(delay);
+        delayLine.setDelay(newDelay);
     }
 }
 
